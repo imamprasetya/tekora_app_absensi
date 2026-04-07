@@ -26,9 +26,10 @@ class _LoginScreenState extends State<LoginScreen> {
         password: passwordController.text,
       );
 
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const MainScreen()),
+        (route) => false,
       );
     } catch (e) {
       ScaffoldMessenger.of(

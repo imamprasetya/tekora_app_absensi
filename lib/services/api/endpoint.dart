@@ -10,14 +10,16 @@ class Endpoint {
   static const String editProfile = "$baseUrl/edit-profile";
 
   // ABSEN
-  static const String checkIn = "$baseUrl/absen-check-in";
-  static const String checkOut = "$baseUrl/absen-check-out";
-  static const String history = "$baseUrl/history-absen";
-  static const String absenToday = "$baseUrl/absen-today";
-  static const String absenStats = "$baseUrl/absen-stats";
+  static const String checkIn = "$baseUrl/absen/check-in";
+  static const String checkOut = "$baseUrl/absen/check-out";
+  static const String absenToday = "$baseUrl/absen/today";
+  static const String absenStats = "$baseUrl/absen/stats";
 
-  // DELETE
-  static const String deleteAbsen = "$baseUrl/delete-absen";
+  // IZIN
+  static const String izin = "$baseUrl/izin";
+
+  // HISTORY
+  static const String history = "$baseUrl/history-absen";
 
   // TRAINING & BATCH
   static const String trainings = "$baseUrl/trainings";

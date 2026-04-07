@@ -1,16 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:tekora_app_absensi/services/storage/preference.dart';
+import 'package:tekora_app_absensi/services/api/get_profile.dart';
 import 'package:tekora_app_absensi/utils/app_colors.dart';
+import 'package:tekora_app_absensi/views/edit_profile_screen.dart';
 import 'package:tekora_app_absensi/views/login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String userName = "Loading...";
+  String userEmail = "Loading...";
+
+  @override
+  void initState() {
+    super.initState();
+    loadProfile();
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final token = await PreferenceHandler.getToken();
+      if (token == null) return;
+
+      final profile = await getProfile(token);
+      if (!mounted) return;
+
+      setState(() {
+        userName = profile['name'] ?? "User";
+        userEmail = profile['email'] ?? "user@example.com";
+      });
+    } catch (e) {
+      setState(() {
+        userName = "User";
+        userEmail = "user@example.com";
+      });
+    }
+  }
 
   Future<void> handleLogout(BuildContext context) async {
     await PreferenceHandler.removeToken();
-
     if (!context.mounted) return;
-
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -89,17 +123,17 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 15),
-            const Text(
-              "Mas Imam",
-              style: TextStyle(
+            Text(
+              userName,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
                 color: Colors.black87,
               ),
             ),
-            const Text(
-              "masimam@prasetya.com",
-              style: TextStyle(color: AppColor.secondaryText),
+            Text(
+              userEmail,
+              style: const TextStyle(color: AppColor.secondaryText),
             ),
             const SizedBox(height: 12),
             Container(
@@ -162,6 +196,14 @@ class ProfileScreen extends StatelessWidget {
               Icons.person_outline,
               "Edit Profile",
               "Update your personal information",
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EditProfileScreen(),
+                  ),
+                );
+              },
             ),
             _menuItem(
               Icons.lock_outline,
@@ -284,7 +326,12 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _menuItem(IconData icon, String title, String subtitle) {
+  Widget _menuItem(
+    IconData icon,
+    String title,
+    String subtitle, [
+    VoidCallback? onTap,
+  ]) {
     return Container(
       margin: const EdgeInsets.only(bottom: 2),
       decoration: const BoxDecoration(color: Colors.white),
@@ -310,7 +357,7 @@ class ProfileScreen extends StatelessWidget {
           size: 14,
           color: Colors.grey,
         ),
-        onTap: () {},
+        onTap: onTap,
       ),
     );
   }
