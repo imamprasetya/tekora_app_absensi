@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart'; // Tambahkan ini
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:tekora_app_absensi/services/api/attendence.dart';
 import 'package:tekora_app_absensi/services/api/endpoint.dart';
@@ -21,6 +21,9 @@ class CheckInScreen extends StatefulWidget {
 }
 
 class _CheckInScreenState extends State<CheckInScreen> {
+  // Inisialisasi Service Baru
+  final AttendanceService _attendanceService = AttendanceService();
+
   String checkInTimeDisplay = "--:--";
   String checkOutTimeDisplay = "--:--";
   String checkInLocationDisplay = "-";
@@ -31,7 +34,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
   DateTime lastCheckDate = DateTime.now();
   Timer? timer;
 
-  // Controller untuk Google Maps
   GoogleMapController? mapController;
 
   @override
@@ -40,24 +42,20 @@ class _CheckInScreenState extends State<CheckInScreen> {
     _loadAttendanceData();
     _determinePosition();
 
-    // Timer untuk mendeteksi perubahan tanggal
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       final now = DateTime.now();
 
-      // Cek apakah tanggal sudah berubah
       if (now.day != lastCheckDate.day ||
           now.month != lastCheckDate.month ||
           now.year != lastCheckDate.year) {
         lastCheckDate = now;
-        // Reset data untuk hari baru
         setState(() {
           checkInTimeDisplay = "--:--";
           checkOutTimeDisplay = "--:--";
           checkInLocationDisplay = "-";
           checkOutLocationDisplay = "-";
         });
-        // Reload data absen untuk hari baru
         _loadAttendanceData();
       }
     });
@@ -119,7 +117,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
       dynamic raw = data['data'];
       if (raw is! Map) return;
 
-      // Periksa apakah data dari API adalah untuk hari ini
       String? apiDate = raw['attendance_date'] ?? raw['date'] ?? raw['tanggal'];
       bool isDataForToday = false;
       if (apiDate != null) {
@@ -127,7 +124,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
         isDataForToday = normalizedApiDate == todayKey;
       }
 
-      // Jika data tidak untuk hari ini, skip
       if (!isDataForToday) return;
 
       bool isValidTime(dynamic value) {
@@ -137,68 +133,38 @@ class _CheckInScreenState extends State<CheckInScreen> {
       }
 
       String apiCheckIn =
-          raw['check_in'] ??
-          raw['checkin'] ??
-          raw['check_in_time'] ??
-          raw['checkIn'] ??
-          raw['checkInTime'] ??
-          "--:--";
+          raw['check_in'] ?? raw['checkin'] ?? raw['check_in_time'] ?? "--:--";
       String apiCheckOut =
           raw['check_out'] ??
           raw['checkout'] ??
           raw['check_out_time'] ??
-          raw['checkOut'] ??
-          raw['checkOutTime'] ??
           "--:--";
-      String apiCheckInLocation =
-          raw['check_in_address'] ??
-          raw['check_in_location'] ??
-          raw['checkin_address'] ??
-          raw['checkInAddress'] ??
-          raw['checkInLocation'] ??
-          "-";
-      String apiCheckOutLocation =
-          raw['check_out_address'] ??
-          raw['check_out_location'] ??
-          raw['checkout_address'] ??
-          raw['checkOutAddress'] ??
-          raw['checkOutLocation'] ??
-          "-";
+      String apiCheckInLoc =
+          raw['check_in_address'] ?? raw['check_in_location'] ?? "-";
+      String apiCheckOutLoc =
+          raw['check_out_address'] ?? raw['check_out_location'] ?? "-";
 
       setState(() {
         if (isValidTime(apiCheckIn)) {
           checkInTimeDisplay = apiCheckIn.toString();
-          checkInLocationDisplay = apiCheckInLocation.toString();
-        } else if (savedCheckInDate == todayKey && isValidTime(savedCheckIn)) {
-          checkInTimeDisplay = savedCheckIn;
-          checkInLocationDisplay = savedCheckInLocation;
+          checkInLocationDisplay = apiCheckInLoc.toString();
         }
-
         if (isValidTime(apiCheckOut)) {
           checkOutTimeDisplay = apiCheckOut.toString();
-          checkOutLocationDisplay = apiCheckOutLocation.toString();
-        } else if (savedCheckOutDate == todayKey &&
-            isValidTime(savedCheckOut)) {
-          checkOutTimeDisplay = savedCheckOut;
-          checkOutLocationDisplay = savedCheckOutLocation;
+          checkOutLocationDisplay = apiCheckOutLoc.toString();
         }
       });
-    } catch (_) {
-      // Jika API gagal, data lokal tetap dipakai.
-    }
+    } catch (_) {}
   }
 
   Future<void> _determinePosition() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       setState(() => currentAddress = "GPS tidak aktif");
       return;
     }
 
-    permission = await Geolocator.checkPermission();
+    LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
@@ -220,7 +186,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
         currentAddress =
             "${place.street}, ${place.subLocality}, ${place.locality}";
 
-        // Gerakkan kamera map ke lokasi baru
         mapController?.animateCamera(
           CameraUpdate.newLatLng(LatLng(position.latitude, position.longitude)),
         );
@@ -247,18 +212,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
       String checkTime = DateFormat('HH:mm').format(DateTime.now());
 
       if (widget.currentStatus == "none") {
-        // Check In - pastikan belum pernah check in hari ini
-        String existingCheckInDate =
-            prefs.getString('saved_checkin_date_$userKey') ?? "";
-        if (existingCheckInDate == attendanceDate &&
-            checkInTimeDisplay != "--:--") {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Anda sudah check in hari ini")),
-          );
-          return;
-        }
-
-        await postCheckIn(
+        // Menggunakan method dari _attendanceService
+        await _attendanceService.postCheckIn(
           token: token!,
           attendanceDate: attendanceDate,
           checkInTime: checkTime,
@@ -266,39 +221,21 @@ class _CheckInScreenState extends State<CheckInScreen> {
           lng: myPos!.longitude,
           address: currentAddress,
         );
+
         await prefs.setString('saved_checkin_$userKey', checkTime);
         await prefs.setString('saved_checkin_date_$userKey', attendanceDate);
         await prefs.setString(
           'saved_checkin_location_$userKey',
           currentAddress,
         );
+
         setState(() {
           checkInTimeDisplay = checkTime;
           checkInLocationDisplay = currentAddress;
         });
       } else if (widget.currentStatus == "checkin") {
-        // Check Out - pastikan sudah check in dan belum check out
-        String existingCheckInDate =
-            prefs.getString('saved_checkin_date_$userKey') ?? "";
-        String existingCheckOutDate =
-            prefs.getString('saved_checkout_date_$userKey') ?? "";
-
-        if (existingCheckInDate != attendanceDate) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Anda belum check in hari ini")),
-          );
-          return;
-        }
-
-        if (existingCheckOutDate == attendanceDate &&
-            checkOutTimeDisplay != "--:--") {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Anda sudah check out hari ini")),
-          );
-          return;
-        }
-
-        await postCheckOut(
+        // Menggunakan method dari _attendanceService
+        await _attendanceService.postCheckOut(
           token: token!,
           attendanceDate: attendanceDate,
           checkOutTime: checkTime,
@@ -306,22 +243,18 @@ class _CheckInScreenState extends State<CheckInScreen> {
           lng: myPos!.longitude,
           address: currentAddress,
         );
+
         await prefs.setString('saved_checkout_$userKey', checkTime);
         await prefs.setString('saved_checkout_date_$userKey', attendanceDate);
         await prefs.setString(
           'saved_checkout_location_$userKey',
           currentAddress,
         );
+
         setState(() {
           checkOutTimeDisplay = checkTime;
           checkOutLocationDisplay = currentAddress;
         });
-      } else if (widget.currentStatus == "checkout") {
-        // Sudah selesai absen hari ini
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Absensi hari ini sudah selesai")),
-        );
-        return;
       }
 
       if (mounted) {
@@ -354,7 +287,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
       ),
       body: Column(
         children: [
-          // Bagian Atas: Info Jam
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Container(
@@ -394,8 +326,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
               ),
             ),
           ),
-
-          // Bagian Tengah: GOOGLE MAPS
           Expanded(
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -407,7 +337,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 borderRadius: BorderRadius.circular(13),
                 child: GoogleMap(
                   initialCameraPosition: const CameraPosition(
-                    target: LatLng(-6.2000, 106.8166), // Default Jakarta
+                    target: LatLng(-6.2000, 106.8166),
                     zoom: 15,
                   ),
                   onMapCreated: (controller) => mapController = controller,
@@ -426,8 +356,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
               ),
             ),
           ),
-
-          // Bagian Bawah: Info Alamat & Tombol
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -513,7 +441,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          softWrap: true,
           style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
       ],

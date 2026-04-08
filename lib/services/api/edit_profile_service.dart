@@ -10,10 +10,11 @@ Future<Map<String, dynamic>> updateProfile(
   final url = Uri.parse(Endpoint.editProfile);
 
   try {
-    final response = await http.post(
+    final response = await http.put(
       url,
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({'name': name, 'email': email}),
@@ -27,10 +28,10 @@ Future<Map<String, dynamic>> updateProfile(
     if (response.statusCode == 200 || response.statusCode == 422) {
       return data;
     } else {
-      return {'message': 'Gagal mengupdate profil'};
+      return {'error': true, 'message': data['message'] ?? 'Gagal mengupdate profil'};
     }
   } catch (e) {
     print('Update Profile Error: $e');
-    return {'message': 'Terjadi kesalahan: $e'};
+    return {'error': true, 'message': 'Terjadi kesalahan: $e'};
   }
 }

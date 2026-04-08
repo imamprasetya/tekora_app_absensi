@@ -51,8 +51,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> handleLogout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    // HANYA hapus token agar sesi berakhir, tapi data jam absen per user tetap di memori
+    // Hapus token dan email user agar sesi benar-benar bersih
     await prefs.remove('token');
+    await prefs.remove('active_user_email');
 
     if (!context.mounted) return;
 
@@ -208,12 +209,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               "Edit Profile",
               "Update your personal information",
               () {
-                Navigator.push(
+                Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const EditProfileScreen(),
                   ),
-                );
+                ).then((isUpdated) {
+                  if (isUpdated == true) {
+                    loadProfile();
+                  }
+                });
               },
             ),
             _menuItem(

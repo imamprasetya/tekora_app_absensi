@@ -21,6 +21,7 @@ Future<void> login({required String email, required String password}) async {
 
     if (response.statusCode == 200) {
       await PreferenceHandler.saveToken(data["data"]["token"]);
+      await PreferenceHandler.saveUserEmail(email); // Simpan email user
     } else {
       throw Exception(data["message"]);
     }

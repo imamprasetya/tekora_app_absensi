@@ -1,23 +1,45 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:tekora_app_absensi/models/attendence_model.dart';
 import 'package:tekora_app_absensi/services/api/endpoint.dart';
 
-Future<void> postCheckIn({
-  required String token,
-  required String attendanceDate,
-  required String checkInTime,
-  required double lat,
-  required double lng,
-  required String address,
-}) async {
-  final url = Uri.parse(Endpoint.checkIn);
+class AttendanceService {
+  Future<List<AttendanceModel>> fetchHistory(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse(Endpoint.history),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
 
-  try {
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> decodedData = json.decode(response.body);
+        final List<dynamic> historyList = decodedData['data'];
+        return historyList
+            .map((item) => AttendanceModel.fromJson(item))
+            .toList();
+      } else {
+        throw Exception('Gagal memuat riwayat');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> postCheckIn({
+    required String token,
+    required String attendanceDate,
+    required String checkInTime,
+    required double lat,
+    required double lng,
+    required String address,
+  }) async {
     final response = await http.post(
-      url,
+      Uri.parse(Endpoint.checkIn),
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
@@ -31,35 +53,27 @@ Future<void> postCheckIn({
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      final errorData = jsonDecode(response.body);
-      throw errorData['message'] ?? "Gagal Check In";
+      throw jsonDecode(response.body)['message'] ?? "Gagal Check In";
     }
-  } catch (e) {
-    rethrow;
   }
-}
 
-Future<void> postCheckOut({
-  required String token,
-  required String attendanceDate,
-  required String checkOutTime,
-  required double lat,
-  required double lng,
-  required String address,
-}) async {
-  final url = Uri.parse(Endpoint.checkOut);
-
-  try {
+  Future<void> postCheckOut({
+    required String token,
+    required String attendanceDate,
+    required String checkOutTime,
+    required double lat,
+    required double lng,
+    required String address,
+  }) async {
     final response = await http.post(
-      url,
+      Uri.parse(Endpoint.checkOut),
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       },
       body: jsonEncode({
         "attendance_date": attendanceDate,
-        "check_out": checkOutTime, // Tetap gunakan check_out
+        "check_out": checkOutTime,
         "check_out_lat": lat.toString(),
         "check_out_lng": lng.toString(),
         "check_out_location": "$lat,$lng",
@@ -68,10 +82,7 @@ Future<void> postCheckOut({
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      final errorData = jsonDecode(response.body);
-      throw errorData['message'] ?? "Gagal Check Out";
+      throw jsonDecode(response.body)['message'] ?? "Gagal Check Out";
     }
-  } catch (e) {
-    rethrow;
   }
 }

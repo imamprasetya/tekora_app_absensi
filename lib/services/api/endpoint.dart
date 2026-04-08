@@ -7,7 +7,7 @@ class Endpoint {
 
   // USER
   static const String profile = "$baseUrl/profile";
-  static const String editProfile = "$baseUrl/edit-profile";
+  static const String editProfile = "$baseUrl/profile";
 
   // ABSEN
   static const String checkIn = "$baseUrl/absen/check-in";
@@ -19,7 +19,7 @@ class Endpoint {
   static const String izin = "$baseUrl/izin";
 
   // HISTORY
-  static const String history = "$baseUrl/history-absen";
+  static const String history = "$baseUrl/absen/history";
 
   // TRAINING & BATCH
   static const String trainings = "$baseUrl/trainings";
