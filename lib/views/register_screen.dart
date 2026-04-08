@@ -26,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool isLoading = false;
   bool isLoadingData = true;
+  bool obscurePassword = true;
 
   @override
   void initState() {
@@ -45,6 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
     } catch (e) {
       setState(() => isLoadingData = false);
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Gagal load data: $e")));
@@ -73,6 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         trainingId: selectedTraining!,
       );
 
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Register berhasil")));
@@ -82,124 +85,300 @@ class _RegisterScreenState extends State<RegisterScreen> {
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
 
-    setState(() => isLoading = false);
+    if (mounted) setState(() => isLoading = false);
+  }
+
+  InputDecoration _inputDecoration(String label, IconData icon, bool isDark) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: AppColor.primary.withOpacity(0.7)),
+      filled: true,
+      fillColor: isDark ? Colors.white.withOpacity(0.05) : AppColor.inputFill,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: isDark ? Colors.white12 : AppColor.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColor.primary, width: 1.5),
+      ),
+    );
+  }
+
+  InputDecoration _dropdownDecoration(String label, IconData icon, bool isDark) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: AppColor.primary.withOpacity(0.7)),
+      filled: true,
+      fillColor: isDark ? Colors.white.withOpacity(0.05) : AppColor.inputFill,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: isDark ? Colors.white12 : AppColor.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColor.primary, width: 1.5),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
+
     return Scaffold(
-      backgroundColor: AppColor.background,
-      body: isLoadingData
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Image.asset('assets/image/logo_tekora.png', width: 120),
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
+      body: SafeArea(
+        child: isLoadingData
+            ? const Center(
+                child: CircularProgressIndicator(),
+              )
+            : Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 20),
 
-                  const SizedBox(height: 20),
-
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: "Full Name"),
-                  ),
-
-                  TextField(
-                    controller: emailController,
-                    decoration: const InputDecoration(labelText: "Email"),
-                  ),
-
-                  TextField(
-                    controller: passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: "Password"),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // JENIS KELAMIN
-                  DropdownButtonFormField<String>(
-                    hint: const Text("Jenis Kelamin"),
-                    items: ["L", "P"]
-                        .map(
-                          (e) => DropdownMenuItem(
-                            value: e,
-                            child: Text(e == "L" ? "Laki-laki" : "Perempuan"),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (val) => selectedGender = val,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // BATCH
-                  DropdownButtonFormField<int>(
-                    hint: const Text("Batch"),
-                    value: selectedBatch,
-                    items: batchList.map((item) {
-                      return DropdownMenuItem<int>(
-                        value: item['id'],
-                        child: Text(item['name'] ?? "Batch ${item['id']}"),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        selectedBatch = val;
-                      });
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // TRAINING (FIX DI SINI)
-                  DropdownButtonFormField<int>(
-                    hint: const Text("Training"),
-                    value: selectedTraining,
-                    items: trainingList.map((item) {
-                      return DropdownMenuItem<int>(
-                        value: item['id'],
-                        child: Text(
-                          item['jurusan'] ??
-                              item['name'] ??
-                              item['title'] ??
-                              "Training ${item['id']}",
+                      // Logo
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColor.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        selectedTraining = val;
-                      });
-                    },
-                  ),
+                        child: Image.asset(
+                          'assets/image/logo_tekora.png',
+                          width: 60,
+                          height: 60,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Create Account",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColor.primary,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "Join Tekora Attendance System",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
 
-                  const SizedBox(height: 20),
+                        const SizedBox(height: 30),
 
-                  ElevatedButton(
-                    onPressed: isLoading ? null : handleRegister,
-                    child: isLoading
-                        ? const CircularProgressIndicator()
-                        : const Text("Create Account"),
-                  ),
+                        // Card Form
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              // Name
+                              TextField(
+                                controller: nameController,
+                                style: TextStyle(color: textColor),
+                                decoration: _inputDecoration("Full Name", Icons.person_outline, isDark),
+                              ),
+                              const SizedBox(height: 14),
 
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    },
-                    child: const Text("Login"),
+                              // Email
+                              TextField(
+                                controller: emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                style: TextStyle(color: textColor),
+                                decoration: _inputDecoration("Email Address", Icons.email_outlined, isDark),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Password
+                              TextField(
+                                controller: passwordController,
+                                obscureText: obscurePassword,
+                                style: TextStyle(color: textColor),
+                                decoration: _inputDecoration("Password", Icons.lock_outline, isDark).copyWith(
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                      color: Colors.grey,
+                                    ),
+                                    onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Gender
+                              DropdownButtonFormField<String>(
+                                decoration: _dropdownDecoration("Jenis Kelamin", Icons.wc_outlined, isDark),
+                                dropdownColor: cardColor,
+                                items: ["L", "P"]
+                                    .map(
+                                      (e) => DropdownMenuItem(
+                                        value: e,
+                                        child: Text(
+                                          e == "L" ? "Laki-laki" : "Perempuan",
+                                          style: TextStyle(color: textColor),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) => selectedGender = val,
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Batch
+                              DropdownButtonFormField<int>(
+                                decoration: _dropdownDecoration("Batch", Icons.groups_outlined, isDark),
+                                dropdownColor: cardColor,
+                                value: selectedBatch,
+                                items: batchList.map((item) {
+                                  return DropdownMenuItem<int>(
+                                    value: item['id'],
+                                    child: Text(
+                                      item['name'] ?? "Batch ${item['id']}",
+                                      style: TextStyle(color: textColor),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  setState(() => selectedBatch = val);
+                                },
+                              ),
+                              const SizedBox(height: 14),
+
+                              // Training
+                              DropdownButtonFormField<int>(
+                                decoration: _dropdownDecoration("Training", Icons.school_outlined, isDark),
+                                dropdownColor: cardColor,
+                                value: selectedTraining,
+                                items: trainingList.map((item) {
+                                  return DropdownMenuItem<int>(
+                                    value: item['id'],
+                                    child: Text(
+                                      item['jurusan'] ??
+                                          item['name'] ??
+                                          item['title'] ??
+                                          "Training ${item['id']}",
+                                      style: TextStyle(color: textColor),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  setState(() => selectedTraining = val);
+                                },
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // Register Button
+                              SizedBox(
+                                width: double.infinity,
+                                height: 54,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColor.primary,
+                                    foregroundColor: Colors.white,
+                                    elevation: 2,
+                                    shadowColor: AppColor.primary.withOpacity(0.4),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  onPressed: isLoading ? null : handleRegister,
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2.5,
+                                          ),
+                                        )
+                                      : const Text(
+                                          "Create Account",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // Login link
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Already have an account? ",
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                              );
+                            },
+                            child: Text(
+                              "Login",
+                              style: TextStyle(
+                                color: AppColor.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+        ),
     );
   }
 }

@@ -22,7 +22,9 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime now = DateTime.now();
   DateTime lastCheckDate = DateTime.now();
   Timer? timer;
+  Timer? scrollTimer;
   bool isLoading = false;
+  ScrollController historyScrollController = ScrollController();
 
   /// Status absen: "none", "checkin", "checkout"
   String status = "none";
@@ -34,11 +36,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Map<String, dynamic>> weeklyHistory = [];
   bool isLoadingHistory = false;
+  
+  Map<String, dynamic>? statsData;
+  bool isLoadingStats = false;
 
   @override
   void initState() {
     super.initState();
     _initialLoad();
+    _startAutoScroll();
 
     // Timer untuk jam digital running
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -72,11 +78,34 @@ class _HomeScreenState extends State<HomeScreen> {
     await loadProfile();
     await loadTodayAbsen();
     await loadWeeklyHistory();
+    await loadStats();
+  }
+
+  void _startAutoScroll() {
+    scrollTimer?.cancel();
+    scrollTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (!mounted) return;
+      if (historyScrollController.hasClients) {
+        final maxScroll = historyScrollController.position.maxScrollExtent;
+        final currentScroll = historyScrollController.offset;
+        final isScrolling = historyScrollController.position.isScrollingNotifier.value;
+        
+        // Auto-scroll jika maxScroll valid dan belum mentok 
+        if (!isScrolling && maxScroll > 0 && currentScroll < maxScroll) {
+          historyScrollController.jumpTo(currentScroll + 1.0);
+        } else if (!isScrolling && currentScroll >= maxScroll && maxScroll > 0) {
+          // Putar balik ke awal
+          historyScrollController.jumpTo(0.0);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     timer?.cancel();
+    scrollTimer?.cancel();
+    historyScrollController.dispose();
     super.dispose();
   }
 
@@ -216,6 +245,41 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// ================= AMBIL DATA STATISTIK BULANAN =================
+  Future<void> loadStats() async {
+    if (!mounted) return;
+    setState(() => isLoadingStats = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      final dt = DateTime.now();
+      // Tarik start date dari tanggal 1 bulan ini
+      final startDate = DateFormat('yyyy-MM-01').format(dt);
+      final monthEnd = DateTime(dt.year, dt.month + 1, 0);
+      final endDate = DateFormat('yyyy-MM-dd').format(monthEnd);
+
+      final url = "${Endpoint.absenStats}?start=$startDate&end=$endDate";
+
+      final res = await http.get(
+        Uri.parse(url),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      );
+
+      final data = jsonDecode(res.body);
+      if (data != null && data['data'] != null) {
+        setState(() => statsData = data['data']);
+      }
+    } catch (e) {
+      debugPrint("Error loadStats: $e");
+    } finally {
+      if (mounted) setState(() => isLoadingStats = false);
+    }
+  }
+
   Future<void> handleNavigation() async {
     final result = await Navigator.push(
       context,
@@ -227,6 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (result == true) {
       loadTodayAbsen();
       loadWeeklyHistory();
+      loadStats();
     }
   }
 
@@ -236,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColor.primary,
         title: const Text(
@@ -250,6 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: () async {
           await loadTodayAbsen();
           await loadWeeklyHistory();
+          await loadStats();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -264,9 +330,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 4),
               Text(
                 userName,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
               ),
               const SizedBox(height: 25),
@@ -352,16 +419,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             onPressed: handleNavigation,
-                            child: Text(
-                              status == "none"
-                                  ? "Check In Now"
-                                  : status == "checkin"
-                                  ? "Check Out Now"
-                                  : "View Attendance",
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  status == "none"
+                                      ? "Check In Now"
+                                      : status == "checkin"
+                                      ? "Check Out Now"
+                                      : "View Attendance",
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                             ),
                           ),
                     const SizedBox(height: 12),
@@ -388,14 +458,14 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 30),
 
               /// ================= WEEKLY HISTORY SECTION =================
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
                   "Weekly History",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
               ),
@@ -413,88 +483,154 @@ class _HomeScreenState extends State<HomeScreen> {
               else
                 SizedBox(
                   height: 170,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: weeklyHistory.length,
-                    itemBuilder: (context, index) {
-                      final dayData = weeklyHistory[index];
-                      final dateStr =
-                          dayData['attendance_date']?.toString() ??
-                          dayData['tanggal']?.toString() ??
-                          dayData['date']?.toString() ??
-                          '';
-                      final date = DateTime.tryParse(dateStr) ?? DateTime.now();
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (notif) {
+                      if (notif is ScrollStartNotification && notif.dragDetails != null) {
+                        scrollTimer?.cancel();
+                      } else if (notif is ScrollEndNotification) {
+                        _startAutoScroll();
+                      }
+                      return false;
+                    },
+                    child: ListView.builder(
+                      controller: historyScrollController,
+                      scrollDirection: Axis.horizontal,
+                      itemCount: weeklyHistory.length,
+                      itemBuilder: (context, index) {
+                        final dayData = weeklyHistory[index];
+                        final dateStr =
+                            dayData['attendance_date']?.toString() ??
+                            dayData['tanggal']?.toString() ??
+                            dayData['date']?.toString() ??
+                            '';
+                        final date = DateTime.tryParse(dateStr) ?? DateTime.now();
 
-                      return Container(
-                        width: 200,
-                        margin: const EdgeInsets.only(right: 16, bottom: 5),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  DateFormat('EEEE, dd MMM').format(date),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColor.primary,
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: _getStatusColor(dayData['status']?.toString() ?? 'masuk').withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    (dayData['status']?.toString() ?? 'Masuk').toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: _getStatusColor(dayData['status']?.toString() ?? 'masuk'),
+                        return Container(
+                          width: 200,
+                          margin: const EdgeInsets.only(right: 16, bottom: 5),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      DateFormat('EEE, dd MMM').format(date),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: AppColor.primary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-                            _buildHistoryRow(
-                              "In",
-                              dayData['check_in']?.toString() ??
-                                  dayData['check_in_time']?.toString() ??
-                                  dayData['jam_masuk']?.toString() ??
-                                  "--:--",
-                              Colors.green,
-                            ),
-                            const SizedBox(height: 8),
-                            _buildHistoryRow(
-                              "Out",
-                              dayData['check_out']?.toString() ??
-                                  dayData['check_out_time']?.toString() ??
-                                  dayData['jam_keluar']?.toString() ??
-                                  "--:--",
-                              Colors.red,
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _getStatusColor(dayData['status']?.toString() ?? 'masuk').withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      (dayData['status']?.toString() ?? 'Masuk').toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: _getStatusColor(dayData['status']?.toString() ?? 'masuk'),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+                              _buildHistoryRow(
+                                "In",
+                                dayData['check_in']?.toString() ??
+                                    dayData['check_in_time']?.toString() ??
+                                    dayData['jam_masuk']?.toString() ??
+                                    "--:--",
+                                Colors.green,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildHistoryRow(
+                                "Out",
+                                dayData['check_out']?.toString() ??
+                                    dayData['check_out_time']?.toString() ??
+                                    dayData['jam_keluar']?.toString() ??
+                                    "--:--",
+                                Colors.red,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
+
+              /// ================= STATISTIK =================
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  "Statistik Bulanan",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (isLoadingStats)
+                const Center(child: CircularProgressIndicator())
+              else if (statsData == null)
+                const Center(child: Text("Gagal memuat statistik", style: TextStyle(color: Colors.grey)))
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatItem(
+                        Icons.check_circle_outline,
+                        "Hadir",
+                        statsData!['total_masuk']?.toString() ?? "0",
+                        Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatItem(
+                        Icons.calendar_month_outlined,
+                        "Total Absen",
+                        statsData!['total_absen']?.toString() ?? "0",
+                        Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatItem(
+                        Icons.warning_amber_rounded,
+                        "Izin/Sakit",
+                        statsData!['total_izin']?.toString() ?? "0",
+                        Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 100),
             ],
           ),
         ),
@@ -533,6 +669,42 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.white.withOpacity(0.85),
               fontSize: 12,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, String title, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 11, color: Colors.grey),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tekora_app_absensi/services/storage/preference.dart';
 import 'package:tekora_app_absensi/services/api/get_profile.dart';
 import 'package:tekora_app_absensi/utils/app_colors.dart';
+import 'package:tekora_app_absensi/utils/theme_notifier.dart';
 import 'package:tekora_app_absensi/views/edit_profile_screen.dart';
 import 'package:tekora_app_absensi/views/login_screen.dart';
 
@@ -67,7 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -137,10 +138,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 15),
             Text(
               userName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
-                color: Colors.black87,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
             ),
             Text(
@@ -230,6 +231,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Icons.notifications_none_outlined,
               "Notifications",
               "Manage your alert preferences",
+            ),
+            ValueListenableBuilder<ThemeMode>(
+              valueListenable: ThemeNotifier.themeModeNotifier,
+              builder: (context, mode, child) {
+                final isDark = mode == ThemeMode.dark;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 2),
+                  decoration: BoxDecoration(color: Theme.of(context).cardColor),
+                  child: SwitchListTile(
+                    secondary: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        isDark ? Icons.dark_mode : Icons.light_mode,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    title: const Text(
+                      "Dark Mode",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    subtitle: const Text(
+                      "Toggle application wide theme",
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                    value: isDark,
+                    activeColor: Colors.blue,
+                    onChanged: (val) {
+                      ThemeNotifier.toggleTheme();
+                    },
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 30),
             SizedBox(
@@ -344,15 +381,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ]) {
     return Container(
       margin: const EdgeInsets.only(bottom: 2),
-      decoration: const BoxDecoration(color: Colors.white),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
+            color: Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: AppColor.primary),
+          child: Icon(icon, color: Colors.blue),
         ),
         title: Text(
           title,

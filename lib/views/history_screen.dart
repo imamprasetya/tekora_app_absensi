@@ -84,7 +84,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         .length;
 
     return Scaffold(
-      backgroundColor: AppColor.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -113,12 +113,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           "Riwayat\nAbsensi",
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             height: 1.2,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
                           ),
                         ),
                         // Dropdown yang bisa diklik
@@ -198,7 +199,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       height: 140,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -241,7 +242,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -280,9 +281,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
               children: [
                 Text(
                   DateFormat('EEEE').format(item.attendanceDate),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 5),
