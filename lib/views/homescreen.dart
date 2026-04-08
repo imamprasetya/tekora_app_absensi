@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Import service & util punyamu
@@ -34,11 +35,16 @@ class _HomeScreenState extends State<HomeScreen> {
   String checkInLocation = "-";
   String checkOutLocation = "-";
 
+  // Data history mingguan
+  List<Map<String, dynamic>> weeklyHistory = [];
+  bool isLoadingHistory = false;
+
   @override
   void initState() {
     super.initState();
     loadProfile();
     loadTodayAbsen();
+    loadWeeklyHistory();
 
     // Timer untuk jam digital running
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -51,8 +57,17 @@ class _HomeScreenState extends State<HomeScreen> {
             now.month != lastCheckDate.month ||
             now.year != lastCheckDate.year) {
           lastCheckDate = now;
+          // Reset data untuk hari baru - mulai dari nol
+          setState(() {
+            status = "none";
+            checkInTime = "--:--";
+            checkOutTime = "--:--";
+            checkInLocation = "-";
+            checkOutLocation = "-";
+          });
           // Reload data absen untuk hari baru
           loadTodayAbsen();
+          loadWeeklyHistory();
         }
       });
     });
@@ -124,6 +139,23 @@ class _HomeScreenState extends State<HomeScreen> {
           !(rawData is List && rawData.isEmpty) &&
           !(rawData is Map && rawData.isEmpty);
 
+      // Periksa apakah data dari API adalah untuk hari ini
+      bool isDataForToday = false;
+      if (hasData && rawData is Map) {
+        String? apiDate =
+            rawData['attendance_date'] ?? rawData['date'] ?? rawData['tanggal'];
+        if (apiDate != null) {
+          // Pastikan format tanggal sama
+          String normalizedApiDate = apiDate.toString().substring(0, 10);
+          isDataForToday = normalizedApiDate == todayKey;
+        }
+      }
+
+      // Jika data tidak untuk hari ini, anggap tidak ada data
+      if (!isDataForToday) {
+        hasData = false;
+      }
+
       dynamic apiCheckIn;
       dynamic apiCheckOut;
       dynamic apiCheckInLocation;
@@ -162,10 +194,15 @@ class _HomeScreenState extends State<HomeScreen> {
           checkInLocation = "-";
           checkOutLocation = "-";
 
+          // Prioritas: local storage untuk status real-time
           if (savedCheckOutDate == todayKey && isValidTime(savedCheckOut)) {
             status = "checkout";
             checkOutTime = savedCheckOut;
             checkOutLocation = savedCheckOutLocation;
+            if (savedCheckInDate == todayKey && isValidTime(savedCheckIn)) {
+              checkInTime = savedCheckIn;
+              checkInLocation = savedCheckInLocation;
+            }
           } else if (savedCheckInDate == todayKey &&
               isValidTime(savedCheckIn)) {
             status = "checkin";
@@ -177,12 +214,17 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       } else {
         setState(() {
+          // API data sebagai prioritas utama untuk display
           checkInTime = isValidTime(apiCheckIn)
               ? apiCheckIn.toString()
-              : "--:--";
+              : (savedCheckInDate == todayKey && isValidTime(savedCheckIn)
+                    ? savedCheckIn
+                    : "--:--");
           checkOutTime = isValidTime(apiCheckOut)
               ? apiCheckOut.toString()
-              : "--:--";
+              : (savedCheckOutDate == todayKey && isValidTime(savedCheckOut)
+                    ? savedCheckOut
+                    : "--:--");
           checkInLocation = isValidTime(apiCheckInLocation)
               ? apiCheckInLocation.toString()
               : (savedCheckInDate == todayKey ? savedCheckInLocation : "-");
@@ -190,17 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? apiCheckOutLocation.toString()
               : (savedCheckOutDate == todayKey ? savedCheckOutLocation : "-");
 
-          if (!isValidTime(apiCheckIn) &&
-              savedCheckInDate == todayKey &&
-              isValidTime(savedCheckIn)) {
-            checkInTime = savedCheckIn;
-          }
-          if (!isValidTime(apiCheckOut) &&
-              savedCheckOutDate == todayKey &&
-              isValidTime(savedCheckOut)) {
-            checkOutTime = savedCheckOut;
-          }
-
+          // Logika status: API first, then local storage
           if (isValidTime(apiCheckOut) ||
               (savedCheckOutDate == todayKey && isValidTime(savedCheckOut))) {
             status = "checkout";
@@ -223,8 +255,65 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// ================= AMBIL DATA HISTORY MINGGUAN =================
+  Future<void> loadWeeklyHistory() async {
+    setState(() => isLoadingHistory = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token == null) return;
+
+      final res = await http.get(
+        Uri.parse(Endpoint.history),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      );
+
+      final data = jsonDecode(res.body);
+      if (data['data'] != null && data['data'] is List) {
+        // Filter data untuk minggu ini saja
+        final now = DateTime.now();
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        final endOfWeek = startOfWeek.add(const Duration(days: 6));
+
+        List<Map<String, dynamic>> weekData = [];
+        for (var item in data['data']) {
+          if (item is Map) {
+            final attendanceDate = item['attendance_date'];
+            if (attendanceDate != null) {
+              try {
+                final date = DateTime.parse(attendanceDate);
+                if (date.isAfter(
+                      startOfWeek.subtract(const Duration(days: 1)),
+                    ) &&
+                    date.isBefore(endOfWeek.add(const Duration(days: 1)))) {
+                  weekData.add(Map<String, dynamic>.from(item));
+                }
+              } catch (_) {
+                // Skip invalid date format
+              }
+            }
+          }
+        }
+
+        setState(() {
+          weeklyHistory = weekData;
+        });
+      }
+    } catch (e) {
+      // Handle error silently
+    } finally {
+      if (mounted) setState(() => isLoadingHistory = false);
+    }
+  }
+
   /// ================= NAVIGASI KE HALAMAN ABSEN =================
   Future<void> handleNavigation() async {
+    // Simpan status sebelum navigasi
+    String previousStatus = status;
+
     // Menunggu hasil dari halaman CheckInScreen
     final result = await Navigator.push(
       context,
@@ -235,6 +324,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Jika result adalah true, berarti user baru saja melakukan CheckIn/Out
     if (result == true) {
+      // Update status secara langsung berdasarkan aksi yang dilakukan
+      if (previousStatus == "none") {
+        // Jika sebelumnya "none", maka user baru check in, status jadi "checkin"
+        setState(() => status = "checkin");
+      } else if (previousStatus == "checkin") {
+        // Jika sebelumnya "checkin", maka user baru check out, status jadi "checkout"
+        setState(() => status = "checkout");
+      }
+
       // Memanggil ulang data dari API untuk memperbarui jam di UI HomeScreen
       loadTodayAbsen();
     }
@@ -485,6 +583,171 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 30),
+
+              // Weekly History Section
+              if (isLoadingHistory)
+                const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColor.primary),
+                  ),
+                )
+              else if (weeklyHistory.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        "Weekly Attendance History",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColor.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 200,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: weeklyHistory.length,
+                        itemBuilder: (context, index) {
+                          final dayData = weeklyHistory[index];
+                          final date = DateTime.parse(dayData['tanggal']);
+                          final checkIn = dayData['jam_masuk'] ?? '--:--';
+                          final checkOut = dayData['jam_keluar'] ?? '--:--';
+                          final locationIn =
+                              dayData['lokasi_masuk'] ?? 'Not recorded';
+                          final locationOut =
+                              dayData['lokasi_keluar'] ?? 'Not recorded';
+
+                          return Container(
+                            width: 280,
+                            margin: const EdgeInsets.only(right: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  DateFormat('EEEE, dd MMM').format(date),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColor.primary,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            "Check In",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            checkIn,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            locationIn,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      height: 50,
+                                      color: Colors.grey.withOpacity(0.3),
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            "Check Out",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            checkOut,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.red,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            locationOut,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    "No attendance history available for this week",
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                ),
             ],
           ),
         ),

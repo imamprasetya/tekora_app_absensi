@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -27,6 +28,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
   String currentAddress = "Mencari lokasi...";
   Position? myPos;
   bool isLoading = false;
+  DateTime lastCheckDate = DateTime.now();
+  Timer? timer;
 
   // Controller untuk Google Maps
   GoogleMapController? mapController;
@@ -36,6 +39,34 @@ class _CheckInScreenState extends State<CheckInScreen> {
     super.initState();
     _loadAttendanceData();
     _determinePosition();
+
+    // Timer untuk mendeteksi perubahan tanggal
+    timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final now = DateTime.now();
+
+      // Cek apakah tanggal sudah berubah
+      if (now.day != lastCheckDate.day ||
+          now.month != lastCheckDate.month ||
+          now.year != lastCheckDate.year) {
+        lastCheckDate = now;
+        // Reset data untuk hari baru
+        setState(() {
+          checkInTimeDisplay = "--:--";
+          checkOutTimeDisplay = "--:--";
+          checkInLocationDisplay = "-";
+          checkOutLocationDisplay = "-";
+        });
+        // Reload data absen untuk hari baru
+        _loadAttendanceData();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAttendanceData() async {
@@ -87,6 +118,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
 
       dynamic raw = data['data'];
       if (raw is! Map) return;
+
+      // Periksa apakah data dari API adalah untuk hari ini
+      String? apiDate = raw['attendance_date'] ?? raw['date'] ?? raw['tanggal'];
+      bool isDataForToday = false;
+      if (apiDate != null) {
+        String normalizedApiDate = apiDate.toString().substring(0, 10);
+        isDataForToday = normalizedApiDate == todayKey;
+      }
+
+      // Jika data tidak untuk hari ini, skip
+      if (!isDataForToday) return;
 
       bool isValidTime(dynamic value) {
         return value != null &&
@@ -205,6 +247,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
       String checkTime = DateFormat('HH:mm').format(DateTime.now());
 
       if (widget.currentStatus == "none") {
+        // Check In - pastikan belum pernah check in hari ini
+        String existingCheckInDate =
+            prefs.getString('saved_checkin_date_$userKey') ?? "";
+        if (existingCheckInDate == attendanceDate &&
+            checkInTimeDisplay != "--:--") {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Anda sudah check in hari ini")),
+          );
+          return;
+        }
+
         await postCheckIn(
           token: token!,
           attendanceDate: attendanceDate,
@@ -224,6 +277,27 @@ class _CheckInScreenState extends State<CheckInScreen> {
           checkInLocationDisplay = currentAddress;
         });
       } else if (widget.currentStatus == "checkin") {
+        // Check Out - pastikan sudah check in dan belum check out
+        String existingCheckInDate =
+            prefs.getString('saved_checkin_date_$userKey') ?? "";
+        String existingCheckOutDate =
+            prefs.getString('saved_checkout_date_$userKey') ?? "";
+
+        if (existingCheckInDate != attendanceDate) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Anda belum check in hari ini")),
+          );
+          return;
+        }
+
+        if (existingCheckOutDate == attendanceDate &&
+            checkOutTimeDisplay != "--:--") {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Anda sudah check out hari ini")),
+          );
+          return;
+        }
+
         await postCheckOut(
           token: token!,
           attendanceDate: attendanceDate,
@@ -242,6 +316,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
           checkOutTimeDisplay = checkTime;
           checkOutLocationDisplay = currentAddress;
         });
+      } else if (widget.currentStatus == "checkout") {
+        // Sudah selesai absen hari ini
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Absensi hari ini sudah selesai")),
+        );
+        return;
       }
 
       if (mounted) {
