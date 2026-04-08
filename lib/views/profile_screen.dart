@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tekora_app_absensi/services/storage/preference.dart';
 import 'package:tekora_app_absensi/services/api/get_profile.dart';
 import 'package:tekora_app_absensi/utils/app_colors.dart';
@@ -34,17 +35,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
         userName = profile['name'] ?? "User";
         userEmail = profile['email'] ?? "user@example.com";
       });
+
+      // Simpan email ke prefs agar bisa digunakan sebagai Key Unik di CheckInScreen
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('active_user_email', userEmail);
     } catch (e) {
-      setState(() {
-        userName = "User";
-        userEmail = "user@example.com";
-      });
+      if (mounted) {
+        setState(() {
+          userName = "User";
+          userEmail = "user@example.com";
+        });
+      }
     }
   }
 
   Future<void> handleLogout(BuildContext context) async {
-    await PreferenceHandler.removeToken();
+    final prefs = await SharedPreferences.getInstance();
+    // HANYA hapus token agar sesi berakhir, tapi data jam absen per user tetap di memori
+    await prefs.remove('token');
+
     if (!context.mounted) return;
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -229,7 +240,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 onPressed: () async {
-                  final confirm = await showDialog(
+                  final confirm = await showDialog<bool>(
                     context: context,
                     builder: (_) => AlertDialog(
                       title: const Text("Logout"),
@@ -248,6 +259,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   );
 
                   if (confirm == true) {
+                    if (!mounted) return;
                     await handleLogout(context);
                   }
                 },
@@ -283,13 +295,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

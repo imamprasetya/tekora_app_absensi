@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tekora_app_absensi/services/api/endpoint.dart';
 import 'package:tekora_app_absensi/services/api/get_profile.dart';
 import 'package:tekora_app_absensi/utils/app_colors.dart';
-import 'package:tekora_app_absensi/views/checkin_screen.dart'; // Pastikan path benar
+import 'package:tekora_app_absensi/views/checkin_screen.dart';
 import 'package:tekora_app_absensi/views/izin_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -21,11 +21,18 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String userName = "Loading...";
   DateTime now = DateTime.now();
+  DateTime lastCheckDate = DateTime.now();
   Timer? timer;
   bool isLoading = false;
 
   /// Status absen: "none" (belum), "checkin" (sudah masuk), "checkout" (selesai)
   String status = "none";
+
+  // Variabel untuk menampung jam absen dari API
+  String checkInTime = "--:--";
+  String checkOutTime = "--:--";
+  String checkInLocation = "-";
+  String checkOutLocation = "-";
 
   @override
   void initState() {
@@ -38,6 +45,15 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() {
         now = DateTime.now();
+
+        // Cek apakah tanggal sudah berubah
+        if (now.day != lastCheckDate.day ||
+            now.month != lastCheckDate.month ||
+            now.year != lastCheckDate.year) {
+          lastCheckDate = now;
+          // Reload data absen untuk hari baru
+          loadTodayAbsen();
+        }
       });
     });
   }
@@ -60,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
         userName = profile['name'] ?? "User";
       });
     } catch (e) {
-      setState(() => userName = "User");
+      if (mounted) setState(() => userName = "User");
     }
   }
 
@@ -70,6 +86,21 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
+      final userKey = prefs.getString('active_user_email') ?? "default";
+      final todayKey = DateTime.now().toIso8601String().substring(0, 10);
+
+      String savedCheckIn =
+          prefs.getString('saved_checkin_$userKey') ?? "--:--";
+      String savedCheckOut =
+          prefs.getString('saved_checkout_$userKey') ?? "--:--";
+      String savedCheckInDate =
+          prefs.getString('saved_checkin_date_$userKey') ?? "";
+      String savedCheckOutDate =
+          prefs.getString('saved_checkout_date_$userKey') ?? "";
+      String savedCheckInLocation =
+          prefs.getString('saved_checkin_location_$userKey') ?? "-";
+      String savedCheckOutLocation =
+          prefs.getString('saved_checkout_location_$userKey') ?? "-";
 
       final res = await http.get(
         Uri.parse(Endpoint.absenToday),
@@ -81,23 +112,120 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final data = jsonDecode(res.body);
 
-      if (data['data'] == null) {
-        status = "none";
-      } else if (data['data']['check_out'] != null) {
-        status = "checkout";
+      bool isValidTime(dynamic value) {
+        return value != null &&
+            value.toString().trim().isNotEmpty &&
+            value.toString() != "--:--";
+      }
+
+      dynamic rawData = data['data'];
+      bool hasData =
+          rawData != null &&
+          !(rawData is List && rawData.isEmpty) &&
+          !(rawData is Map && rawData.isEmpty);
+
+      dynamic apiCheckIn;
+      dynamic apiCheckOut;
+      dynamic apiCheckInLocation;
+      dynamic apiCheckOutLocation;
+      if (hasData && rawData is Map) {
+        apiCheckIn =
+            rawData['check_in'] ??
+            rawData['checkin'] ??
+            rawData['check_in_time'] ??
+            rawData['checkIn'] ??
+            rawData['checkInTime'];
+        apiCheckOut =
+            rawData['check_out'] ??
+            rawData['checkout'] ??
+            rawData['check_out_time'] ??
+            rawData['checkOut'] ??
+            rawData['checkOutTime'];
+        apiCheckInLocation =
+            rawData['check_in_address'] ??
+            rawData['check_in_location'] ??
+            rawData['checkin_address'] ??
+            rawData['checkInAddress'] ??
+            rawData['checkInLocation'];
+        apiCheckOutLocation =
+            rawData['check_out_address'] ??
+            rawData['check_out_location'] ??
+            rawData['checkout_address'] ??
+            rawData['checkOutAddress'] ??
+            rawData['checkOutLocation'];
+      }
+
+      if (!hasData) {
+        setState(() {
+          checkInTime = "--:--";
+          checkOutTime = "--:--";
+          checkInLocation = "-";
+          checkOutLocation = "-";
+
+          if (savedCheckOutDate == todayKey && isValidTime(savedCheckOut)) {
+            status = "checkout";
+            checkOutTime = savedCheckOut;
+            checkOutLocation = savedCheckOutLocation;
+          } else if (savedCheckInDate == todayKey &&
+              isValidTime(savedCheckIn)) {
+            status = "checkin";
+            checkInTime = savedCheckIn;
+            checkInLocation = savedCheckInLocation;
+          } else {
+            status = "none";
+          }
+        });
       } else {
-        status = "checkin";
+        setState(() {
+          checkInTime = isValidTime(apiCheckIn)
+              ? apiCheckIn.toString()
+              : "--:--";
+          checkOutTime = isValidTime(apiCheckOut)
+              ? apiCheckOut.toString()
+              : "--:--";
+          checkInLocation = isValidTime(apiCheckInLocation)
+              ? apiCheckInLocation.toString()
+              : (savedCheckInDate == todayKey ? savedCheckInLocation : "-");
+          checkOutLocation = isValidTime(apiCheckOutLocation)
+              ? apiCheckOutLocation.toString()
+              : (savedCheckOutDate == todayKey ? savedCheckOutLocation : "-");
+
+          if (!isValidTime(apiCheckIn) &&
+              savedCheckInDate == todayKey &&
+              isValidTime(savedCheckIn)) {
+            checkInTime = savedCheckIn;
+          }
+          if (!isValidTime(apiCheckOut) &&
+              savedCheckOutDate == todayKey &&
+              isValidTime(savedCheckOut)) {
+            checkOutTime = savedCheckOut;
+          }
+
+          if (isValidTime(apiCheckOut) ||
+              (savedCheckOutDate == todayKey && isValidTime(savedCheckOut))) {
+            status = "checkout";
+          } else if (isValidTime(apiCheckIn) ||
+              (savedCheckInDate == todayKey && isValidTime(savedCheckIn))) {
+            status = "checkin";
+          } else {
+            status = "none";
+          }
+        });
       }
     } catch (e) {
-      status = "none";
+      setState(() {
+        status = "none";
+        checkInTime = "--:--";
+        checkOutTime = "--:--";
+      });
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   /// ================= NAVIGASI KE HALAMAN ABSEN =================
   Future<void> handleNavigation() async {
-    // Pindah ke halaman CheckInScreen sambil bawa status saat ini
+    // Menunggu hasil dari halaman CheckInScreen
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -105,8 +233,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
 
-    // Jika kembali dan membawa nilai 'true', artinya absen sukses, maka refresh
+    // Jika result adalah true, berarti user baru saja melakukan CheckIn/Out
     if (result == true) {
+      // Memanggil ulang data dari API untuk memperbarui jam di UI HomeScreen
       loadTodayAbsen();
     }
   }
@@ -177,7 +306,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 25),
 
               /// CARD WAKTU & TOMBOL UTAMA
@@ -213,8 +341,98 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontSize: 16,
                       ),
                     ),
+                    const SizedBox(height: 35),
 
-                    const SizedBox(height: 30),
+                    /// INFO JAM ABSEN (BERDAMPINGAN) - DI ATAS TOMBOL CHECK OUT
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.15),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              children: [
+                                const Text(
+                                  "Check In",
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  checkInTime,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  checkInLocation,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.85),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            width: 1.5,
+                            height: 90,
+                            color: Colors.white.withOpacity(0.2),
+                          ),
+                          Expanded(
+                            child: Column(
+                              children: [
+                                const Text(
+                                  "Check Out",
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  checkOutTime,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  checkOutLocation,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.85),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
 
                     /// TOMBOL DINAMIS
                     isLoading
@@ -229,26 +447,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               elevation: 0,
                             ),
-                            // Jika sudah checkout, tombol mati (null)
-                            onPressed: status == "checkout"
-                                ? null
-                                : handleNavigation,
+                            onPressed: handleNavigation,
                             child: Text(
                               status == "none"
                                   ? "Check In Now"
                                   : status == "checkin"
                                   ? "Check Out Now"
-                                  : "Attendance Completed",
+                                  : "View Attendance",
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-
                     const SizedBox(height: 12),
-
-                    /// BUTTON IZIN (Hanya muncul jika belum absen sama sekali)
                     if (status == "none")
                       OutlinedButton(
                         style: OutlinedButton.styleFrom(
@@ -272,10 +484,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 30),
-
-              // Tambahkan widget lain seperti Riwayat Singkat di sini jika perlu
             ],
           ),
         ),
