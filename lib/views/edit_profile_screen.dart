@@ -16,12 +16,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
 
   bool _loading = true;
-  String? _userEmail; // Disimpan hanya untuk tampilan (read-only)
+  bool _isSaving = false;
+  String? _userEmail;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {
@@ -38,8 +45,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       setState(() {
         _nameController.text = profile['name'] ?? "";
-        _userEmail =
-            profile['email'] ?? ""; // Email tidak diedit, hanya disimpan
+        _userEmail = profile['email'] ?? "";
         _loading = false;
       });
     } catch (e) {
@@ -55,22 +61,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _updateProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _loading = true);
+    setState(() => _isSaving = true);
 
     try {
       final token = await PreferenceHandler.getToken();
       if (token == null) return;
 
-      // Hanya mengirimkan Nama sesuai permintaan
       final response = await updateProfile(
         token,
         _nameController.text.trim(),
-        _userEmail ?? "", // Kirim email yang lama agar tidak error di backend
+        _userEmail ?? "",
       );
 
       if (!mounted) return;
 
-      setState(() => _loading = false);
+      setState(() => _isSaving = false);
 
       if (response['errors'] != null) {
         String errorMsg =
@@ -80,7 +85,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
         return;
       } else if (response['error'] == true) {
-        // Fallback jika message error bukan berupa dict (mungkin API down atau message khusus)
         String errorMsg = response['message'] ?? "Terjadi kesalahan";
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
@@ -95,11 +99,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       );
 
-      // Kembali ke layar sebelumnya (Profile) dan beritahu ada perubahan
       Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        setState(() => _loading = false);
+        setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Terjadi kesalahan, coba lagi")),
         );
@@ -113,7 +116,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
-          "Edit Nama Profil",
+          "Edit Profil",
           style: TextStyle(
             color: AppColor.primary,
             fontWeight: FontWeight.bold,
@@ -132,12 +135,67 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Ubah nama tampilan Anda di bawah ini:",
-                      style: TextStyle(color: Colors.grey, fontSize: 14),
+                    // Avatar
+                    Center(
+                      child: Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColor.primary.withOpacity(0.3),
+                                width: 3,
+                              ),
+                            ),
+                            child: const CircleAvatar(
+                              radius: 50,
+                              backgroundImage: NetworkImage(
+                                'https://i.pravatar.cc/300',
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColor.primary,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Theme.of(context).scaffoldBackgroundColor,
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 20),
 
+                    const SizedBox(height: 32),
+
+                    const Text(
+                      "Informasi Pribadi",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      "Ubah nama tampilan Anda di bawah ini",
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Nama (editable)
                     TextFormField(
                       controller: _nameController,
                       decoration: InputDecoration(
@@ -148,7 +206,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         prefixIcon: const Icon(Icons.person_outline),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: Theme.of(context).cardColor,
                       ),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
@@ -158,15 +216,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       },
                     ),
 
-                    const SizedBox(height: 12),
-                    // Informasi tambahan agar user tahu email tidak bisa diubah di sini
+                    const SizedBox(height: 16),
+
+                    // Email (read-only)
                     if (_userEmail != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: Text(
-                          "Email: $_userEmail (Tidak dapat diubah)",
-                          style: const TextStyle(
-                            fontSize: 12,
+                      TextFormField(
+                        initialValue: _userEmail,
+                        readOnly: true,
+                        enabled: false,
+                        decoration: InputDecoration(
+                          labelText: "Email",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          filled: true,
+                          fillColor: Theme.of(context).cardColor.withOpacity(0.5),
+                          helperText: "Email tidak dapat diubah",
+                          helperStyle: const TextStyle(
+                            fontSize: 11,
                             color: Colors.grey,
                           ),
                         ),
@@ -174,11 +242,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                     const SizedBox(height: 32),
 
+                    // Tombol Simpan
                     SizedBox(
                       width: double.infinity,
                       height: 55,
                       child: ElevatedButton(
-                        onPressed: _updateProfile,
+                        onPressed: _isSaving ? null : _updateProfile,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColor.primary,
                           foregroundColor: Colors.white,
@@ -186,16 +255,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           elevation: 2,
+                          disabledBackgroundColor: AppColor.primary.withOpacity(0.6),
                         ),
-                        child: const Text(
-                          "Simpan Nama Baru",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                "Simpan Nama Baru",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
