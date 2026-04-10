@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tekora_app_absensi/utils/app_colors.dart';
 import 'package:tekora_app_absensi/utils/theme_notifier.dart';
-import 'package:tekora_app_absensi/views/login_screen.dart';
+import 'package:tekora_app_absensi/views/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,7 +54,7 @@ class MyApp extends StatelessWidget {
               elevation: 0,
             ),
           ),
-          home: const LoginScreen(),
+          home: const SplashScreen(),
         );
       },
     );

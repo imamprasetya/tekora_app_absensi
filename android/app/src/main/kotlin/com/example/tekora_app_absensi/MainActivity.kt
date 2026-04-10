@@ -1,4 +1,4 @@
-package com.example.tekora_app_absensi
+package com.ppkd.tekora
 
 import io.flutter.embedding.android.FlutterActivity
 
