@@ -28,7 +28,7 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Logo animation controller (scale + fade in)
+    // Controller animasi untuk logo (efek scale + fade in)
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Text animation controller (slide up + fade in)
+    // Controller animasi untuk teks (efek slide up + fade in)
     _textController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Pulse glow animation (loop)
+    // Animasi efek berkedip (pulse glow loop)
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -83,17 +83,17 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _startAnimations() async {
-    // Start logo animation
+    // Mulai jalankan animasi logo
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
     _logoController.forward();
 
-    // Start text animation after logo
+    // Jalankan animasi teks setelah animasi logo selesai
     await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
     _textController.forward();
 
-    // Navigate after animations complete
+    // Lanjut pindah halaman setelah semua animasi selesai dieksekusi
     await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
     _navigateToNextScreen();
@@ -155,7 +155,7 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Stack(
           children: [
-            // Background decorative circles
+            // Dekorasi lingkaran di bagian latar belakang
             Positioned(
               top: -80,
               right: -80,
@@ -197,12 +197,12 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
 
-            // Main content
+            // Konten utama halaman
             Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo with animation
+                  // Widget logo yang sudah dibungkus dengan animasi
                   AnimatedBuilder(
                     animation: _logoController,
                     builder: (context, child) {
@@ -244,7 +244,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                   const SizedBox(height: 40),
 
-                  // App name
+                  // Teks nama aplikasi
                   SlideTransition(
                     position: _textSlide,
                     child: FadeTransition(
@@ -263,7 +263,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                   const SizedBox(height: 12),
 
-                  // Subtitle
+                  // Teks sub-judul (tagline)
                   FadeTransition(
                     opacity: _subtitleOpacity,
                     child: const Text(
@@ -279,7 +279,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
 
-            // Bottom version text
+            // Keterangan versi aplikasi di paling bawah layar
             Positioned(
               bottom: 40,
               left: 0,

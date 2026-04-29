@@ -58,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
+                // Bagian logo aplikasi
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -92,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 40),
 
-                  // Card Login
+                  // Kontainer form login (Card)
                   Container(
                     padding: const EdgeInsets.all(28),
                     decoration: BoxDecoration(
@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 28),
 
-                        // Email Field
+                        // Kolom input alamat email
                         TextField(
                           controller: emailController,
                           keyboardType: TextInputType.emailAddress,
@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 16),
 
-                        // Password Field
+                        // Kolom input kata sandi (password)
                         TextField(
                           controller: passwordController,
                           obscureText: obscurePassword,
@@ -189,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 28),
 
-                        // Login Button
+                        // Tombol eksekusi login
                         SizedBox(
                           width: double.infinity,
                           height: 54,
@@ -229,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 28),
 
-                  // Register Link
+                  // Tautan arah menuju halaman register
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

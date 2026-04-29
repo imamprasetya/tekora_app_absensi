@@ -157,7 +157,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       const SizedBox(height: 20),
 
-                      // Logo
+                      // Bagian logo aplikasi
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -191,7 +191,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                         const SizedBox(height: 30),
 
-                        // Card Form
+                        // Kontainer form utama (Card)
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
@@ -207,7 +207,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                           child: Column(
                             children: [
-                              // Name
+                              // Kolom input nama lengkap
                               TextField(
                                 controller: nameController,
                                 style: TextStyle(color: textColor),
@@ -215,7 +215,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 14),
 
-                              // Email
+                              // Kolom input alamat email
                               TextField(
                                 controller: emailController,
                                 keyboardType: TextInputType.emailAddress,
@@ -224,7 +224,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 14),
 
-                              // Password
+                              // Kolom input kata sandi (password)
                               TextField(
                                 controller: passwordController,
                                 obscureText: obscurePassword,
@@ -241,7 +241,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 14),
 
-                              // Gender
+                              // Dropdown jenis kelamin
                               DropdownButtonFormField<String>(
                                 decoration: _dropdownDecoration("Gender", Icons.wc_outlined, isDark),
                                 dropdownColor: cardColor,
@@ -260,7 +260,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 14),
 
-                              // Batch
+                              // Dropdown pilihan batch
                               DropdownButtonFormField<int>(
                                 isExpanded: true,
                                 decoration: _dropdownDecoration("Batch", Icons.groups_outlined, isDark),
@@ -281,7 +281,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 14),
 
-                              // Training
+                              // Dropdown pilihan training / jurusan
                               DropdownButtonFormField<int>(
                                 isExpanded: true,
                                 decoration: _dropdownDecoration("Training", Icons.school_outlined, isDark),
@@ -306,7 +306,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                               const SizedBox(height: 24),
 
-                              // Register Button
+                              // Tombol eksekusi register
                               SizedBox(
                                 width: double.infinity,
                                 height: 54,
@@ -346,7 +346,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 24),
 
-                      // Login link
+                      // Tautan arah balik ke halaman login
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

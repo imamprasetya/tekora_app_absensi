@@ -9,7 +9,7 @@ class ProfilePhotoService {
 
   /// Menampilkan bottom sheet untuk memilih sumber foto (kamera/galeri)
   /// dan menyimpan foto ke local storage.
-  /// Returns path foto yang disimpan, atau null jika dibatalkan.
+  /// Mengembalikan path foto yang berhasil disimpan, atau null jika proses dibatalkan.
   static Future<String?> pickAndSavePhoto({
     required ImageSource source,
   }) async {
