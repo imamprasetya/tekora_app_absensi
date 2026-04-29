@@ -49,7 +49,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Gagal load data: $e")));
+      ).showSnackBar(SnackBar(content: Text("Failed to load data: $e")));
     }
   }
 
@@ -59,7 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         selectedTraining == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Semua field harus diisi")));
+      ).showSnackBar(const SnackBar(content: Text("All fields must be filled")));
       return;
     }
 
@@ -78,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Register berhasil")));
+      ).showSnackBar(const SnackBar(content: Text("Registration successful")));
 
       Navigator.pushReplacement(
         context,
@@ -161,7 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColor.primary.withOpacity(0.1),
+                          color: isDark ? Colors.white.withOpacity(0.8) : AppColor.primary.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Image.asset(
@@ -243,14 +243,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                               // Gender
                               DropdownButtonFormField<String>(
-                                decoration: _dropdownDecoration("Jenis Kelamin", Icons.wc_outlined, isDark),
+                                decoration: _dropdownDecoration("Gender", Icons.wc_outlined, isDark),
                                 dropdownColor: cardColor,
                                 items: ["L", "P"]
                                     .map(
                                       (e) => DropdownMenuItem(
                                         value: e,
                                         child: Text(
-                                          e == "L" ? "Laki-laki" : "Perempuan",
+                                          e == "L" ? "Male" : "Female",
                                           style: TextStyle(color: textColor),
                                         ),
                                       ),
@@ -262,6 +262,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                               // Batch
                               DropdownButtonFormField<int>(
+                                isExpanded: true,
                                 decoration: _dropdownDecoration("Batch", Icons.groups_outlined, isDark),
                                 dropdownColor: cardColor,
                                 value: selectedBatch,
@@ -282,6 +283,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                               // Training
                               DropdownButtonFormField<int>(
+                                isExpanded: true,
                                 decoration: _dropdownDecoration("Training", Icons.school_outlined, isDark),
                                 dropdownColor: cardColor,
                                 value: selectedTraining,

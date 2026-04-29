@@ -53,7 +53,7 @@ class _IzinScreenState extends State<IzinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Izin")),
+      appBar: AppBar(title: const Text("Leave Request")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -61,7 +61,7 @@ class _IzinScreenState extends State<IzinScreen> {
             TextField(
               controller: alasanController,
               decoration: const InputDecoration(
-                labelText: "Alasan Izin",
+                labelText: "Reason for Leave",
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
@@ -71,7 +71,7 @@ class _IzinScreenState extends State<IzinScreen> {
                 ? const CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: submitIzin,
-                    child: const Text("Kirim Izin"),
+                    child: const Text("Submit Request"),
                   ),
           ],
         ),

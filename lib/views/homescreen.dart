@@ -303,10 +303,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColor.primary,
-        title: const Text(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : AppColor.primary,
+        title: Text(
           "TEKORA",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(
+            fontWeight: FontWeight.bold, 
+            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.white
+          ),
         ),
         centerTitle: true,
         elevation: 0,
@@ -343,14 +346,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppColor.primary,
+                  color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).cardColor : AppColor.primary,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
-                    BoxShadow(
-                      color: AppColor.primary.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
+                    if (Theme.of(context).brightness != Brightness.dark)
+                      BoxShadow(
+                        color: AppColor.primary.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
                   ],
                 ),
                 child: Column(
@@ -411,8 +415,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ? const CircularProgressIndicator(color: Colors.white)
                         : ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: AppColor.primary,
+                              backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.blueGrey.shade800 : Colors.white,
+                              foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColor.primary,
                               minimumSize: const Size(double.infinity, 55),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
@@ -427,9 +431,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                       : status == "checkin"
                                       ? "Check Out Now"
                                       : "View Attendance",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColor.primary,
                                   ),
                                 ),
                             ),
@@ -449,7 +454,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           context,
                           MaterialPageRoute(builder: (_) => const IzinScreen()),
                         ),
-                        child: const Text("Request Permission (Izin)"),
+                        child: Text(
+                          "Submit Leave Request",
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.white,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -505,6 +515,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             '';
                         final date = DateTime.tryParse(dateStr) ?? DateTime.now();
 
+                        final checkInTime = dayData['check_in']?.toString() ??
+                            dayData['check_in_time']?.toString() ??
+                            dayData['jam_masuk']?.toString() ??
+                            "--:--";
+                        final checkOutTime = dayData['check_out']?.toString() ??
+                            dayData['check_out_time']?.toString() ??
+                            dayData['jam_keluar']?.toString() ??
+                            "--:--";
+                        
+                        final computedStatus = _getComputedStatus(
+                          dayData['status']?.toString() ?? 'masuk',
+                          checkInTime,
+                          checkOutTime,
+                        );
+
                         return Container(
                           width: 200,
                           margin: const EdgeInsets.only(right: 16, bottom: 5),
@@ -529,10 +554,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Flexible(
                                     child: Text(
                                       DateFormat('EEE, dd MMM').format(date),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12,
-                                        color: AppColor.primary,
+                                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppColor.primary,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -541,15 +566,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: _getStatusColor(dayData['status']?.toString() ?? 'masuk').withOpacity(0.1),
+                                      color: _getStatusColor(computedStatus).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      (dayData['status']?.toString() ?? 'Masuk').toUpperCase(),
+                                      computedStatus.toUpperCase(),
                                       style: TextStyle(
                                         fontSize: 9,
                                         fontWeight: FontWeight.bold,
-                                        color: _getStatusColor(dayData['status']?.toString() ?? 'masuk'),
+                                        color: _getStatusColor(computedStatus),
                                       ),
                                     ),
                                   ),
@@ -598,7 +623,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (isLoadingStats)
                 const Center(child: CircularProgressIndicator())
               else if (statsData == null)
-                const Center(child: Text("Gagal memuat statistik", style: TextStyle(color: Colors.grey)))
+                const Center(child: Text("Failed to load statistics", style: TextStyle(color: Colors.grey)))
               else
                 Row(
                   children: [
@@ -623,7 +648,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: _buildStatItem(
                         Icons.warning_amber_rounded,
-                        "Izin/Sakit",
+                        "Leave/Sick",
                         statsData!['total_izin']?.toString() ?? "0",
                         Colors.orange,
                       ),
@@ -730,8 +755,47 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Color _getStatusColor(String status) {
     status = status.toLowerCase();
-    if (status.contains('izin') || status.contains('sakit')) return Colors.orange;
+    if (status.contains('izin') || status.contains('sakit') || status.contains('cepat')) return Colors.orange;
     if (status.contains('telat') || status.contains('terlambat')) return Colors.red;
     return Colors.green;
+  }
+
+  String _getComputedStatus(String originalStatus, String? checkIn, String? checkOut) {
+    String status = originalStatus.toLowerCase();
+    if (status.contains('izin') || status.contains('sakit') || status.contains('telat')) {
+      return originalStatus;
+    }
+    
+    bool isLate = false;
+    bool isEarlyLeave = false;
+
+    if (checkIn != null && checkIn != "--:--" && checkIn.isNotEmpty) {
+      try {
+        final parts = checkIn.split(':');
+        if (parts.length >= 2) {
+          final hours = int.tryParse(parts[0]) ?? 0;
+          final mins = int.tryParse(parts[1]) ?? 0;
+          if (hours > 8 || (hours == 8 && mins > 0)) {
+            isLate = true;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (checkOut != null && checkOut != "--:--" && checkOut.isNotEmpty) {
+      try {
+        final parts = checkOut.split(':');
+        if (parts.length >= 2) {
+          final hours = int.tryParse(parts[0]) ?? 0;
+          if (hours < 17) {
+            isEarlyLeave = true;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (isLate) return "Telat";
+    if (isEarlyLeave) return "Pulang Cepat";
+    return "Tepat Waktu";
   }
 }

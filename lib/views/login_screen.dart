@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppColor.primary.withOpacity(0.1),
+                    color: isDark ? Colors.white.withOpacity(0.8) : AppColor.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Image.asset(

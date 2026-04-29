@@ -28,7 +28,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   String checkOutTimeDisplay = "--:--";
   String checkInLocationDisplay = "-";
   String checkOutLocationDisplay = "-";
-  String currentAddress = "Mencari lokasi...";
+  String currentAddress = "Finding location...";
   Position? myPos;
   bool isLoading = false;
   DateTime lastCheckDate = DateTime.now();
@@ -160,7 +160,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   Future<void> _determinePosition() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      setState(() => currentAddress = "GPS tidak aktif");
+      setState(() => currentAddress = "GPS is disabled");
       return;
     }
 
@@ -168,7 +168,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        setState(() => currentAddress = "Izin lokasi ditolak");
+        setState(() => currentAddress = "Location permission denied");
         return;
       }
     }
@@ -197,7 +197,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
     if (myPos == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Menunggu lokasi GPS...")));
+      ).showSnackBar(const SnackBar(content: Text("Waiting for GPS location...")));
       return;
     }
 
@@ -260,13 +260,13 @@ class _CheckInScreenState extends State<CheckInScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text("Absensi Berhasil!")));
+        ).showSnackBar(const SnackBar(content: Text("Attendance Successful!")));
         Navigator.pop(context, true);
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Gagal: $e")));
+      ).showSnackBar(SnackBar(content: Text("Failed: $e")));
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -281,8 +281,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
           "Live Attendance",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        foregroundColor: Theme.of(context).textTheme.bodyLarge?.color,
         elevation: 0.5,
       ),
       body: Column(
@@ -331,7 +331,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.white, width: 2),
+                border: Border.all(color: Theme.of(context).dividerColor, width: 2),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(13),
@@ -362,9 +362,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.location_on,
-                      color: AppColor.primary,
+                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppColor.primary,
                       size: 20,
                     ),
                     const SizedBox(width: 10),
@@ -387,7 +387,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: widget.currentStatus == "checkout"
                           ? Colors.grey
-                          : AppColor.primary,
+                          : (Theme.of(context).brightness == Brightness.dark ? Colors.blueGrey.shade800 : AppColor.primary),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
@@ -433,7 +433,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
         const SizedBox(height: 4),
         Text(
           time,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            fontWeight: FontWeight.bold, 
+            fontSize: 18,
+            color: Theme.of(context).textTheme.bodyLarge?.color,
+          ),
         ),
         const SizedBox(height: 6),
         Text(

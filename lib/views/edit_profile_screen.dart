@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:tekora_app_absensi/services/storage/preference.dart';
 import 'package:tekora_app_absensi/services/api/get_profile.dart';
 import 'package:tekora_app_absensi/services/api/edit_profile_service.dart';
+import 'package:tekora_app_absensi/services/storage/profile_photo_service.dart';
 import 'package:tekora_app_absensi/utils/app_colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -14,20 +17,31 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _jabatanController = TextEditingController();
 
   bool _loading = true;
   bool _isSaving = false;
   String? _userEmail;
+  String? _profilePhotoPath;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadProfilePhoto();
+  }
+
+  Future<void> _loadProfilePhoto() async {
+    final path = await ProfilePhotoService.getPhotoPath();
+    if (mounted) {
+      setState(() => _profilePhotoPath = path);
+    }
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _jabatanController.dispose();
     super.dispose();
   }
 
@@ -43,16 +57,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (!mounted) return;
 
+      final prefs = await SharedPreferences.getInstance();
+      final savedJabatan = prefs.getString('user_jabatan') ?? "Karyawan";
+
       setState(() {
         _nameController.text = profile['name'] ?? "";
         _userEmail = profile['email'] ?? "";
+        _jabatanController.text = savedJabatan;
         _loading = false;
       });
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Gagal memuat data profil")),
+          const SnackBar(content: Text("Failed to load profile data")),
         );
       }
     }
@@ -76,6 +94,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
 
       setState(() => _isSaving = false);
+
+      // Simpan jabatan ke lokal
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_jabatan', _jabatanController.text.trim());
 
       if (response['errors'] != null) {
         String errorMsg =
@@ -148,11 +170,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 width: 3,
                               ),
                             ),
-                            child: const CircleAvatar(
+                            child: CircleAvatar(
                               radius: 50,
-                              backgroundImage: NetworkImage(
-                                'https://i.pravatar.cc/300',
-                              ),
+                              backgroundColor: Colors.grey.shade200,
+                              backgroundImage: _profilePhotoPath != null
+                                  ? FileImage(File(_profilePhotoPath!)) as ImageProvider
+                                  : null,
+                              child: _profilePhotoPath == null
+                                  ? const Icon(Icons.person, size: 50, color: Colors.grey)
+                                  : null,
                             ),
                           ),
                           Positioned(
@@ -211,6 +237,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
                           return "Nama tidak boleh kosong";
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Jabatan (editable)
+                    TextFormField(
+                      controller: _jabatanController,
+                      decoration: InputDecoration(
+                        labelText: "Jabatan / Posisi",
+                        hintText: "Contoh: Senior Developer",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.work_outline),
+                        filled: true,
+                        fillColor: Theme.of(context).cardColor,
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "Jabatan tidak boleh kosong";
                         }
                         return null;
                       },
