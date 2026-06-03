@@ -99,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Absen Ditolak"),
+        title: const Text("Attendance Denied"),
         content: Text(message),
         actions: [
           TextButton(
@@ -337,13 +337,13 @@ class _HomeScreenState extends State<HomeScreen> {
       final now = DateTime.now();
       if (now.weekday == DateTime.saturday || now.weekday == DateTime.sunday) {
         _showCheckInBlockedDialog(
-          "Absen ditolak. Hari ini adalah hari libur (akhir pekan).",
+          "Attendance denied. Today is a weekend (non-working day).",
         );
         return;
       }
       if (now.hour >= 17) {
         _showCheckInBlockedDialog(
-          "Absen masuk ditolak karena sudah melewati jam pulang kantor (17:00).",
+          "Check in denied because office hours have ended (17:00).",
         );
         return;
       }
@@ -366,13 +366,13 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) {
-      return "Selamat Pagi,";
+      return "Good Morning,";
     } else if (hour >= 12 && hour < 15) {
-      return "Selamat Siang,";
+      return "Good Afternoon,";
     } else if (hour >= 15 && hour < 18) {
-      return "Selamat Sore,";
+      return "Good Evening,";
     } else {
-      return "Selamat Malam,";
+      return "Good Night,";
     }
   }
 
@@ -729,7 +729,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     "sick",
                                   )) ...[
                                 const Text(
-                                  "Alasan Izin:",
+                                  "Leave Reason:",
                                   style: TextStyle(
                                     color: Colors.grey,
                                     fontSize: 10,
@@ -740,7 +740,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: Text(
                                     dayData['alasan_izin']?.toString() ??
-                                        "Tanpa alasan",
+                                        "No reason provided",
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -778,7 +778,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
-                  "Statistik Bulanan",
+                  "Monthly Statistics",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -802,7 +802,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: _buildStatItem(
                         Icons.check_circle_outline,
-                        "Hadir",
+                        "Present",
                         statsData!['total_masuk']?.toString() ?? "0",
                         Colors.blue,
                       ),
@@ -811,7 +811,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(
                       child: _buildStatItem(
                         Icons.calendar_month_outlined,
-                        "Total Absen",
+                        "Total Attendance",
                         statsData!['total_absen']?.toString() ?? "0",
                         Colors.green,
                       ),
@@ -846,7 +846,10 @@ class _HomeScreenState extends State<HomeScreen> {
       modeTag = "WFH";
     } else if (location.startsWith("[Dinas Luar]")) {
       cleanLocation = location.substring(12);
-      modeTag = "Dinas Luar";
+      modeTag = "Field Work";
+    } else if (location.startsWith("[Field Work]")) {
+      cleanLocation = location.substring(12);
+      modeTag = "Field Work";
     }
 
     return Expanded(
@@ -1009,8 +1012,8 @@ class _HomeScreenState extends State<HomeScreen> {
       } catch (_) {}
     }
 
-    if (isLate) return "Telat";
-    if (isEarlyLeave) return "Pulang Cepat";
-    return "Tepat Waktu";
+    if (isLate) return "Late";
+    if (isEarlyLeave) return "Early Leave";
+    return "On Time";
   }
 }

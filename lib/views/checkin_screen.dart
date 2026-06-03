@@ -37,7 +37,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   GoogleMapController? mapController;
 
   // Variabel Keamanan & Mode Kerja
-  String workMode = "WFO"; // WFO, WFH, Dinas Luar
+  String workMode = "WFO"; // WFO, WFH, Field Work
   bool isMockLocation = false;
 
   @override
@@ -166,15 +166,15 @@ class _CheckInScreenState extends State<CheckInScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: const Text("GPS Tidak Aktif"),
+        title: const Text("GPS Disabled"),
         content: const Text(
-          "Layanan lokasi (GPS) pada perangkat Anda non-aktif.\n\n"
-          "Harap aktifkan GPS untuk dapat melakukan absensi sesuai standar keamanan.",
+          "Location services (GPS) on your device are disabled.\n\n"
+          "Please enable GPS to proceed with attendance verification.",
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Batal"),
+            child: const Text("Cancel"),
           ),
           TextButton(
             onPressed: () async {
@@ -184,7 +184,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 _determinePosition();
               });
             },
-            child: const Text("Buka Pengaturan"),
+            child: const Text("Open Settings"),
           ),
         ],
       ),
@@ -196,15 +196,15 @@ class _CheckInScreenState extends State<CheckInScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: const Text("Izin Lokasi Ditolak"),
+        title: const Text("Location Permission Denied"),
         content: const Text(
-          "Aplikasi absensi membutuhkan izin lokasi untuk memverifikasi posisi Anda.\n\n"
-          "Harap aktifkan izin lokasi di pengaturan aplikasi.",
+          "This attendance app requires location permission to verify your position.\n\n"
+          "Please enable location permission in app settings.",
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Batal"),
+            child: const Text("Cancel"),
           ),
           TextButton(
             onPressed: () async {
@@ -214,7 +214,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 _determinePosition();
               });
             },
-            child: const Text("Buka Pengaturan"),
+            child: const Text("Open Settings"),
           ),
         ],
       ),
@@ -224,7 +224,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   Future<void> _determinePosition() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      setState(() => currentAddress = "GPS Tidak Aktif");
+      setState(() => currentAddress = "GPS Disabled");
       _showGPSDisabledDialog();
       return;
     }
@@ -233,14 +233,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        setState(() => currentAddress = "Izin lokasi ditolak");
+        setState(() => currentAddress = "Location permission denied");
         _showPermissionDeniedDialog();
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      setState(() => currentAddress = "Izin lokasi ditolak permanen");
+      setState(() => currentAddress = "Location permission permanently denied");
       _showPermissionDeniedDialog();
       return;
     }
@@ -280,7 +280,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => currentAddress = "Gagal memuat koordinat: $e");
+        setState(() => currentAddress = "Failed to load coordinates: $e");
       }
     }
   }
@@ -307,7 +307,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
       setState(() => isLoading = false);
       if (myPos == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Gagal mendeteksi lokasi GPS. Harap coba lagi.")),
+          const SnackBar(content: Text("Failed to detect GPS location. Please try again.")),
         );
         return;
       }
@@ -318,10 +318,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text("Terdeteksi GPS Palsu"),
+          title: const Text("Fake GPS Detected"),
           content: const Text(
-            "Terdeteksi penggunaan lokasi palsu (Mock Location/Fake GPS).\n\n"
-            "Harap nonaktifkan aplikasi fake GPS Anda untuk dapat melakukan absensi.",
+            "Mock location / Fake GPS usage detected.\n\n"
+            "Please disable your fake GPS application to proceed with attendance.",
           ),
           actions: [
             TextButton(
@@ -334,8 +334,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
       return;
     }
 
-    String confirmTitle = "Konfirmasi Absen Masuk";
-    String confirmContent = "Apakah Anda yakin ingin melakukan absen masuk saat ini?";
+    String confirmTitle = "Confirm Check In";
+    String confirmContent = "Are you sure you want to check in now?";
     Color confirmColor = AppColor.primary;
 
     final now = DateTime.now();
@@ -344,8 +344,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text("Absen Ditolak"),
-            content: const Text("Absen ditolak. Hari ini adalah hari libur (akhir pekan)."),
+            title: const Text("Attendance Denied"),
+            content: const Text("Attendance denied. Today is a weekend (non-working day)."),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -361,8 +361,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text("Absen Ditolak"),
-            content: const Text("Absen masuk ditolak karena sudah melewati jam pulang kantor (17:00)."),
+            title: const Text("Attendance Denied"),
+            content: const Text("Check in denied because office hours have ended (after 17:00)."),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -376,19 +376,19 @@ class _CheckInScreenState extends State<CheckInScreen> {
 
       // Deteksi terlambat (setelah pukul 08:00)
       if (now.hour > 8 || (now.hour == 8 && now.minute > 0)) {
-        confirmTitle = "Konfirmasi Absen Masuk (Terlambat)";
-        confirmContent = "Anda melakukan absen masuk setelah pukul 08:00 (Terlambat).\n\nApakah Anda yakin ingin melanjutkan absensi masuk?";
+        confirmTitle = "Confirm Check In (Late)";
+        confirmContent = "You are checking in after 08:00 (Late).\n\nAre you sure you want to proceed?";
         confirmColor = Colors.red;
       }
     } else if (widget.currentStatus == "checkin") {
       // Deteksi pulang cepat (sebelum pukul 17:00)
       if (now.hour < 17) {
-        confirmTitle = "Peringatan Pulang Cepat";
-        confirmContent = "Anda melakukan absen keluar lebih awal (sebelum pukul 17:00).\n\nApakah Anda yakin ingin absen keluar sekarang?";
+        confirmTitle = "Early Departure Warning";
+        confirmContent = "You are checking out early (before 17:00).\n\nAre you sure you want to check out now?";
         confirmColor = Colors.orange;
       } else {
-        confirmTitle = "Konfirmasi Absen Keluar";
-        confirmContent = "Apakah Anda yakin ingin melakukan absen keluar saat ini?";
+        confirmTitle = "Confirm Check Out";
+        confirmContent = "Are you sure you want to check out now?";
       }
     }
 
@@ -400,12 +400,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Batal"),
+            child: const Text("Cancel"),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: confirmColor),
-            child: Text(widget.currentStatus == "none" ? "Ya, Masuk" : "Ya, Keluar"),
+            child: Text(widget.currentStatus == "none" ? "Yes, Check In" : "Yes, Check Out"),
           ),
         ],
       ),
@@ -473,14 +473,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Absensi Berhasil!")),
+          const SnackBar(content: Text("Attendance Successful!")),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Gagal: $e")),
+          SnackBar(content: Text("Failed: $e")),
         );
       }
     } finally {
@@ -615,7 +615,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Mode Kerja:",
+                    "Work Mode:",
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -629,7 +629,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                       const SizedBox(width: 8),
                       Expanded(child: _buildModeChip("WFH", Icons.home)),
                       const SizedBox(width: 8),
-                      Expanded(child: _buildModeChip("Dinas Luar", Icons.commute)),
+                      Expanded(child: _buildModeChip("Field Work", Icons.commute)),
                     ],
                   ),
                 ],
@@ -676,7 +676,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                                     Marker(
                                       markerId: const MarkerId("current_pos"),
                                       position: LatLng(myPos!.latitude, myPos!.longitude),
-                                      infoWindow: const InfoWindow(title: "Lokasi Anda"),
+                                      infoWindow: const InfoWindow(title: "Your Location"),
                                     ),
                                   },
                           ),
@@ -783,9 +783,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
     } else if (location.startsWith("[WFH]")) {
       cleanLocation = location.substring(5);
       modeTag = "WFH";
+    } else if (location.startsWith("[Field Work]")) {
+      cleanLocation = location.substring(12);
+      modeTag = "Field Work";
     } else if (location.startsWith("[Dinas Luar]")) {
       cleanLocation = location.substring(12);
-      modeTag = "Dinas Luar";
+      modeTag = "Field Work";
     }
 
     return Column(

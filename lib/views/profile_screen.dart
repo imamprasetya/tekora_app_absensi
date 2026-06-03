@@ -25,7 +25,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   String userName = "Loading...";
   String userEmail = "Loading...";
-  String userJabatan = "KARYAWAN";
+  String userJabatan = "EMPLOYEE";
   String? _profilePhotoPath;
 
   // Data statistik nyata
@@ -578,18 +578,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           Icon(Icons.notifications_active_outlined, color: AppColor.primary),
                           SizedBox(width: 10),
-                          Text("Pengingat Absen", style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text("Attendance Reminder", style: TextStyle(fontWeight: FontWeight.bold)),
                         ],
                       ),
                       content: Text(
                         currentlyEnabled
-                            ? "Pengingat absen saat ini AKTIF (Senin - Jumat pukul 07:30).\n\nApakah Anda ingin menonaktifkan pengingat ini?"
-                            : "Apakah Anda ingin mengaktifkan pengingat absen masuk otomatis setiap hari kerja (Senin - Jumat pukul 07:30)?"
+                            ? "Attendance reminder is currently ACTIVE (Mon - Fri at 07:30).\n\nWould you like to disable this reminder?"
+                            : "Would you like to enable automatic check-in reminders for every working day (Mon - Fri at 07:30)?"
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+                          child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
                         ),
                         ElevatedButton(
                           onPressed: () async {
@@ -601,8 +601,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 SnackBar(
                                   content: Text(
                                     nextState
-                                        ? "Pengingat absen berhasil diaktifkan untuk Senin - Jumat pukul 07:30"
-                                        : "Pengingat absen dinonaktifkan",
+                                        ? "Attendance reminder enabled for Mon - Fri at 07:30"
+                                        : "Attendance reminder disabled",
                                   ),
                                   backgroundColor: nextState ? Colors.green : Colors.grey.shade700,
                                   behavior: SnackBarBehavior.floating,
@@ -617,7 +617,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: Text(currentlyEnabled ? "Nonaktifkan" : "Aktifkan"),
+                          child: Text(currentlyEnabled ? "Disable" : "Enable"),
                         ),
                       ],
                     );

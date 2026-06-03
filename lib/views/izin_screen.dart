@@ -47,7 +47,7 @@ class _IzinScreenState extends State<IzinScreen> {
   Future<void> submitIzin() async {
     if (alasanController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Silakan masukkan alasan izin")),
+        const SnackBar(content: Text("Please enter a leave reason")),
       );
       return;
     }
@@ -55,16 +55,16 @@ class _IzinScreenState extends State<IzinScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Konfirmasi Izin"),
-        content: Text("Apakah Anda yakin ingin mengajukan izin kerja untuk tanggal ${DateFormat('dd MMMM yyyy').format(selectedDate)}?"),
+        title: const Text("Confirm Leave Request"),
+        content: Text("Are you sure you want to submit a leave request for ${DateFormat('dd MMMM yyyy').format(selectedDate)}?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Batal"),
+            child: const Text("Cancel"),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Ya, Kirim"),
+            child: const Text("Yes, Submit"),
           ),
         ],
       ),
@@ -94,7 +94,7 @@ class _IzinScreenState extends State<IzinScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'] ?? "Pengajuan izin berhasil diajukan")),
+          SnackBar(content: Text(data['message'] ?? "Leave request submitted successfully")),
         );
         Navigator.pop(context, true);
       }
@@ -132,7 +132,7 @@ class _IzinScreenState extends State<IzinScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Tanggal Izin",
+              "Leave Date",
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -183,7 +183,7 @@ class _IzinScreenState extends State<IzinScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              "Alasan Izin",
+              "Leave Reason",
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -194,7 +194,7 @@ class _IzinScreenState extends State<IzinScreen> {
             TextField(
               controller: alasanController,
               decoration: InputDecoration(
-                hintText: "Tuliskan alasan izin kerja...",
+                hintText: "Enter your leave reason...",
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
                 fillColor: isDark ? Colors.blueGrey.shade900.withOpacity(0.5) : AppColor.inputFill,
                 filled: true,

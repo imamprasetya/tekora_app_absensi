@@ -37,7 +37,7 @@ Future<void> register({
     if (response.statusCode == 200) {
       await PreferenceHandler.saveToken(data["data"]["token"]);
     } else {
-      throw Exception(data["message"] ?? "Register gagal");
+      throw Exception(data["message"] ?? "Registration failed");
     }
   } catch (e) {
     log("ERROR REGISTER: $e");

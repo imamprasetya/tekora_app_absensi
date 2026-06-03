@@ -220,7 +220,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
 
       final prefs = await SharedPreferences.getInstance();
-      final savedJabatan = prefs.getString('user_jabatan') ?? "Karyawan";
+      final savedJabatan = prefs.getString('user_jabatan') ?? "Employee";
 
       setState(() {
         _nameController.text = profile['name'] ?? "";
@@ -244,16 +244,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Konfirmasi Perubahan"),
-        content: const Text("Apakah Anda yakin ingin menyimpan perubahan profil Anda?"),
+        title: const Text("Confirm Changes"),
+        content: const Text("Are you sure you want to save your profile changes?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Batal"),
+            child: const Text("Cancel"),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Simpan"),
+            child: const Text("Save"),
           ),
         ],
       ),

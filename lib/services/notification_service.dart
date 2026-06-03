@@ -72,8 +72,8 @@ class NotificationService {
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'absen_reminder_channel',
-      'Pengingat Absen',
-      channelDescription: 'Menampilkan pengingat absen masuk 30 menit sebelum jam kerja',
+      'Attendance Reminder',
+      channelDescription: 'Shows check-in reminder 30 minutes before work hours',
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
@@ -94,15 +94,15 @@ class NotificationService {
         final scheduledTime = _nextInstanceOfDayOfWeek(day, 7, 30);
         await _notificationsPlugin.zonedSchedule(
           id: day,
-          title: 'Pengingat Absen Masuk',
-          body: 'Sudah pukul 07:30! Jangan lupa untuk melakukan absen masuk 30 menit lagi.',
+          title: 'Check-In Reminder',
+          body: 'It\'s 07:30! Don\'t forget to check in — only 30 minutes until work hours.',
           scheduledDate: scheduledTime,
           notificationDetails: notificationDetails,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
         );
       } catch (e) {
-        print("Gagal menjadwalkan notifikasi untuk hari $day: $e");
+        print("Failed to schedule notification for day $day: $e");
       }
     }
   }

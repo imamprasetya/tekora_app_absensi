@@ -91,8 +91,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2101),
-      helpText: "Pilih Bulan Riwayat",
-      cancelText: "Batal",
+      helpText: "Select History Month",
+      cancelText: "Cancel",
       confirmText: "OK",
     );
     if (picked != null) {
@@ -118,7 +118,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  "Pilih Filter Riwayat",
+                  "Select History Filter",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 15),
@@ -127,7 +127,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     Icons.calendar_today_outlined,
                     color: Colors.blue,
                   ),
-                  title: const Text("Bulan Ini"),
+                  title: const Text("This Month"),
                   trailing:
                       _isFiltered &&
                           _selectedDate.month == DateTime.now().month &&
@@ -147,7 +147,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     Icons.date_range_outlined,
                     color: Colors.blue,
                   ),
-                  title: const Text("Pilih Bulan Lain..."),
+                  title: const Text("Select Another Month..."),
                   trailing:
                       _isFiltered &&
                           (_selectedDate.month != DateTime.now().month ||
@@ -164,7 +164,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     Icons.all_inclusive_outlined,
                     color: Colors.blue,
                   ),
-                  title: const Text("Semua Riwayat"),
+                  title: const Text("All History"),
                   trailing: !_isFiltered
                       ? const Icon(Icons.check, color: Colors.blue)
                       : null,
@@ -183,18 +183,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   String _getIndonesianMonthYear(DateTime date) {
     const List<String> months = [
-      "Januari",
-      "Februari",
-      "Maret",
+      "January",
+      "February",
+      "March",
       "April",
-      "Mei",
-      "Juni",
-      "Juli",
-      "Agustus",
+      "May",
+      "June",
+      "July",
+      "August",
       "September",
-      "Oktober",
+      "October",
       "November",
-      "Desember",
+      "December",
     ];
     return "${months[date.month - 1]} ${date.year}";
   }
@@ -205,27 +205,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
       "FEB",
       "MAR",
       "APR",
-      "MEI",
+      "MAY",
       "JUN",
       "JUL",
-      "AGU",
+      "AUG",
       "SEP",
-      "OKT",
+      "OCT",
       "NOV",
-      "DES",
+      "DEC",
     ];
     return shortMonths[date.month - 1];
   }
 
   String _getIndonesianDay(DateTime date) {
     const Map<int, String> days = {
-      1: "Senin",
-      2: "Selasa",
-      3: "Rabu",
-      4: "Kamis",
-      5: "Jumat",
-      6: "Sabtu",
-      7: "Minggu",
+      1: "Monday",
+      2: "Tuesday",
+      3: "Wednesday",
+      4: "Thursday",
+      5: "Friday",
+      6: "Saturday",
+      7: "Sunday",
     };
     return days[date.weekday] ?? "";
   }
@@ -236,7 +236,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         const Center(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
-            child: Text("Belum ada riwayat absensi"),
+            child: Text("No attendance history yet"),
           ),
         ),
       ];
@@ -378,7 +378,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     const SizedBox(height: 30),
                     if (_historyData.isEmpty)
-                      const Center(child: Text("Belum ada riwayat absensi"))
+                      const Center(child: Text("No attendance history yet"))
                     else
                       ..._buildHistoryList(),
                   ],
@@ -402,7 +402,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             const Icon(Icons.calendar_today, size: 14, color: Colors.blue),
             const SizedBox(width: 8),
             Text(
-              _isFiltered ? _getIndonesianMonthYear(_selectedDate) : "Semua",
+              _isFiltered ? _getIndonesianMonthYear(_selectedDate) : "All",
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
             const Icon(Icons.keyboard_arrow_down, size: 18),
@@ -529,7 +529,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 item.status.toLowerCase().contains("sakit") ||
                                 item.status.toLowerCase().contains("leave") ||
                                 item.status.toLowerCase().contains("sick"))
-                            ? (item.alasanIzin ?? "Tanpa alasan")
+                            ? (item.alasanIzin ?? "No reason provided")
                             : "${item.checkInTime ?? '--:--'} - ${item.checkOutTime ?? '--:--'}",
                         style: const TextStyle(
                           fontSize: 12,

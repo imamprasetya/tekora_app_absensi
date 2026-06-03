@@ -12,6 +12,6 @@ Future<Map<String, dynamic>> getProfile(String token) async {
     final data = json.decode(response.body);
     return data['data'];
   } else {
-    throw Exception("Gagal ambil profile");
+    throw Exception("Failed to load profile");
   }
 }

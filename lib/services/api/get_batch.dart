@@ -12,6 +12,6 @@ Future<List<dynamic>> getBatch() async {
     final data = json.decode(response.body);
     return data['data'];
   } else {
-    throw Exception("Gagal ambil batch");
+    throw Exception("Failed to load batches");
   }
 }

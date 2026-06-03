@@ -21,7 +21,7 @@ class AttendanceService {
             .map((item) => AttendanceModel.fromJson(item))
             .toList();
       } else {
-        throw Exception('Gagal memuat riwayat');
+        throw Exception('Failed to load history');
       }
     } catch (e) {
       rethrow;
@@ -53,7 +53,7 @@ class AttendanceService {
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw jsonDecode(response.body)['message'] ?? "Gagal Check In";
+      throw jsonDecode(response.body)['message'] ?? "Check In Failed";
     }
   }
 
@@ -82,7 +82,7 @@ class AttendanceService {
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw jsonDecode(response.body)['message'] ?? "Gagal Check Out";
+      throw jsonDecode(response.body)['message'] ?? "Check Out Failed";
     }
   }
 }

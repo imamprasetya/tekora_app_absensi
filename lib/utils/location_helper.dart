@@ -7,7 +7,7 @@ Future<Position> getCurrentLocation() async {
   bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
   if (!serviceEnabled) {
     throw Exception(
-      "GPS tidak aktif, silakan aktifkan lokasi di pengaturan HP.",
+      "GPS is not active. Please enable location in device settings.",
     );
   }
 
@@ -18,12 +18,12 @@ Future<Position> getCurrentLocation() async {
   }
 
   if (permission == LocationPermission.denied) {
-    throw Exception("Izin lokasi ditolak oleh pengguna.");
+    throw Exception("Location permission denied by user.");
   }
 
   if (permission == LocationPermission.deniedForever) {
     throw Exception(
-      "Izin lokasi ditolak permanen. Buka pengaturan untuk mengaktifkan.",
+      "Location permission permanently denied. Open settings to enable.",
     );
   }
 
@@ -49,9 +49,9 @@ Future<String> getAddressFromLatLng(double lat, double lng) async {
 
       return alamatLengkap;
     } else {
-      return "Nama jalan tidak ditemukan";
+      return "Street name not found";
     }
   } catch (e) {
-    return "Gagal mendapatkan alamat: $e";
+    return "Failed to get address: $e";
   }
 }

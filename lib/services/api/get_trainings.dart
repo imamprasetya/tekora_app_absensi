@@ -12,6 +12,6 @@ Future<List<dynamic>> getTraining() async {
     final data = json.decode(response.body);
     return data['data'];
   } else {
-    throw Exception("Gagal ambil training");
+    throw Exception("Failed to load trainings");
   }
 }

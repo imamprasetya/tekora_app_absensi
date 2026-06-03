@@ -30,7 +30,6 @@ Future<String> updateProfilePhoto(String token, File imageFile) async {
     var jsonResponse = json.decode(responseData);
     String photoUrl = jsonResponse['data']['profile_photo'];
 
-    // Workaround jika APP_URL backend masih mengarah ke localhost/127.0.0.1
     if (photoUrl.contains('127.0.0.1') || photoUrl.contains('localhost')) {
       final baseUri = Uri.parse(Endpoint.baseUrl);
       final domain = '${baseUri.scheme}://${baseUri.host}';
@@ -49,15 +48,13 @@ Future<String> updateProfilePhoto(String token, File imageFile) async {
       photoUrl = '$domain$prefix$photoUrl';
     }
 
-    // Tambahkan parameter untuk mencegah Flutter melakukan cache secara berlebihan
-    // jika URL yang dikembalikan sama.
     final separator = photoUrl.contains('?') ? '&' : '?';
     photoUrl =
         '$photoUrl${separator}v=${DateTime.now().millisecondsSinceEpoch}';
 
     return photoUrl;
   } else {
-    var errorMsg = "Gagal mengupload foto profil";
+    var errorMsg = "Failed to upload profile photo";
     try {
       var jsonResponse = json.decode(responseData);
       if (jsonResponse['message'] != null) {
