@@ -8,6 +8,7 @@ class Endpoint {
   // USER
   static const String profile = "$baseUrl/profile";
   static const String editProfile = "$baseUrl/profile";
+  static const String profilePhoto = "$baseUrl/profile/photo";
 
   // ABSEN
   static const String checkIn = "$baseUrl/absen/check-in";

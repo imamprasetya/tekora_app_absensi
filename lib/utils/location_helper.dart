@@ -1,7 +1,7 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
-/// 1. FUNGSI UNTUK AMBIL KOORDINAT (LATITUDE & LONGITUDE)
+//FUNGSI UNTUK AMBIL KOORDINAT (LATITUDE & LONGITUDE)
 Future<Position> getCurrentLocation() async {
   // Cek apakah GPS di HP aktif
   bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -33,7 +33,7 @@ Future<Position> getCurrentLocation() async {
   );
 }
 
-/// 2. FUNGSI UNTUK MENGUBAH KOORDINAT MENJADI ALAMAT (REVERSE GEOCODING)
+//FUNGSI UNTUK MENGUBAH KOORDINAT MENJADI ALAMAT (REVERSE GEOCODING)
 Future<String> getAddressFromLatLng(double lat, double lng) async {
   try {
     // Fungsi dari package 'geocoding' untuk menerjemahkan koordinat

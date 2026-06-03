@@ -12,6 +12,8 @@ import 'package:tekora_app_absensi/utils/app_colors.dart';
 import 'package:tekora_app_absensi/utils/theme_notifier.dart';
 import 'package:tekora_app_absensi/views/edit_profile_screen.dart';
 import 'package:tekora_app_absensi/views/login_screen.dart';
+import 'package:tekora_app_absensi/services/api/endpoint.dart';
+import 'package:tekora_app_absensi/services/notification_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -54,7 +56,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
         userEmail = profile['email'] ?? "user@example.com";
       });
 
-      // Simpan email ke prefs agar bisa digunakan sebagai Key Unik di CheckInScreen
+      // Sinkronisasi foto profil dari server ke lokal
+      if (profile['profile_photo'] != null &&
+          profile['profile_photo'].toString().isNotEmpty) {
+        String fetchedPhotoUrl = profile['profile_photo'];
+
+        if (fetchedPhotoUrl.contains('127.0.0.1') ||
+            fetchedPhotoUrl.contains('localhost')) {
+          final baseUri = Uri.parse(Endpoint.baseUrl);
+          final domain = '${baseUri.scheme}://${baseUri.host}';
+          fetchedPhotoUrl = fetchedPhotoUrl.replaceAll(
+            RegExp(r'http://127\.0\.0\.1(:\d+)?'),
+            domain,
+          );
+          fetchedPhotoUrl = fetchedPhotoUrl.replaceAll(
+            RegExp(r'http://localhost(:\d+)?'),
+            domain,
+          );
+        } else if (!fetchedPhotoUrl.startsWith('http') &&
+            !fetchedPhotoUrl.startsWith('/')) {
+          final baseUri = Uri.parse(Endpoint.baseUrl);
+          final domain = '${baseUri.scheme}://${baseUri.host}';
+          final prefix = fetchedPhotoUrl.startsWith('public/')
+              ? ''
+              : '/public/';
+          fetchedPhotoUrl = '$domain$prefix$fetchedPhotoUrl';
+        }
+
+        if (mounted) {
+          setState(() {
+            _profilePhotoPath = fetchedPhotoUrl;
+          });
+        }
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('profile_photo_path', fetchedPhotoUrl);
+      }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('active_user_email', userEmail);
 
@@ -98,16 +136,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      final List<AttendanceModel> history =
-          await _attendanceService.fetchHistory(token);
+      final List<AttendanceModel> history = await _attendanceService
+          .fetchHistory(token);
 
       if (!mounted) return;
 
       // === Hitung Attendance Rate ===
       // Attendance rate = (jumlah hari masuk / total hari absen) * 100
       final int totalDays = history.length;
-      final int presentDays =
-          history.where((e) => e.status.toLowerCase() == 'masuk').length;
+      final int presentDays = history
+          .where((e) => e.status.toLowerCase() == 'masuk')
+          .length;
 
       if (totalDays > 0) {
         final double rate = (presentDays / totalDays) * 100;
@@ -202,10 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 20),
             const Text(
               "Change Profile Photo",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
             ListTile(
@@ -302,7 +338,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     try {
-      final savedPath = await ProfilePhotoService.pickAndSavePhoto(source: source);
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      final savedPath = await ProfilePhotoService.pickAndSavePhoto(
+        source: source,
+        token: token,
+      );
 
       if (!mounted) return;
       Navigator.pop(context); // Tutup loading dialog
@@ -358,7 +400,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               radius: 60,
               backgroundColor: Colors.grey.shade200,
               backgroundImage: _profilePhotoPath != null
-                  ? FileImage(File(_profilePhotoPath!)) as ImageProvider
+                  ? (_profilePhotoPath!.startsWith('http')
+                            ? NetworkImage(_profilePhotoPath!)
+                            : FileImage(File(_profilePhotoPath!)))
+                        as ImageProvider
                   : null,
               child: _profilePhotoPath == null
                   ? const Icon(Icons.person, size: 60, color: Colors.grey)
@@ -402,7 +447,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: Text(
           "Tekora",
           style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColor.primary,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : AppColor.primary,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -439,7 +486,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).cardColor : AppColor.accent,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).cardColor
+                    : AppColor.accent,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -450,7 +499,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Text(
                     userJabatan,
                     style: TextStyle(
-                      color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppColor.accentText,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : AppColor.accentText,
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                     ),
@@ -507,31 +558,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 });
               },
             ),
-            _menuItem(
-              Icons.lock_outline,
-              "Change Password",
-              "Secure your account with a new pass",
-              () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("This feature is currently under development"),
-                    backgroundColor: Colors.orange,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
+
             _menuItem(
               Icons.notifications_none_outlined,
               "Notifications",
               "Manage your alert preferences",
-              () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("This feature is currently under development"),
-                    backgroundColor: Colors.orange,
-                    behavior: SnackBarBehavior.floating,
-                  ),
+              () async {
+                final bool currentlyEnabled = await NotificationService.isEnabled();
+                if (!mounted) return;
+                
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: const Row(
+                        children: [
+                          Icon(Icons.notifications_active_outlined, color: AppColor.primary),
+                          SizedBox(width: 10),
+                          Text("Pengingat Absen", style: TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      content: Text(
+                        currentlyEnabled
+                            ? "Pengingat absen saat ini AKTIF (Senin - Jumat pukul 07:30).\n\nApakah Anda ingin menonaktifkan pengingat ini?"
+                            : "Apakah Anda ingin mengaktifkan pengingat absen masuk otomatis setiap hari kerja (Senin - Jumat pukul 07:30)?"
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            final nextState = !currentlyEnabled;
+                            await NotificationService.setEnabled(nextState);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    nextState
+                                        ? "Pengingat absen berhasil diaktifkan untuk Senin - Jumat pukul 07:30"
+                                        : "Pengingat absen dinonaktifkan",
+                                  ),
+                                  backgroundColor: nextState ? Colors.green : Colors.grey.shade700,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: currentlyEnabled ? Colors.red : AppColor.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(currentlyEnabled ? "Nonaktifkan" : "Aktifkan"),
+                        ),
+                      ],
+                    );
+                  },
                 );
               },
             ),
@@ -546,7 +636,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     secondary: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.grey.withOpacity(0.2) : Colors.blue.withOpacity(0.1),
+                        color: isDark
+                            ? Colors.grey.withOpacity(0.2)
+                            : Colors.blue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
@@ -556,7 +648,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     title: const Text(
                       "Dark Mode",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     subtitle: const Text(
                       "Toggle application wide theme",
@@ -577,11 +672,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               height: 55,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.red.withOpacity(0.2) 
+                  backgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? Colors.red.withOpacity(0.2)
                       : AppColor.logoutBg,
-                  foregroundColor: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.redAccent 
+                  foregroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? Colors.redAccent
                       : AppColor.logoutText,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -638,15 +735,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool isPrimary,
   ) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    final bgColor = isPrimary 
-        ? (isDark ? Colors.blueGrey.shade900 : AppColor.primary) 
+
+    final bgColor = isPrimary
+        ? (isDark ? Colors.blueGrey.shade900 : AppColor.primary)
         : Theme.of(context).cardColor;
-        
-    final iconColor = isPrimary ? Colors.white : (isDark ? Colors.white70 : Colors.blue);
+
+    final iconColor = isPrimary
+        ? Colors.white
+        : (isDark ? Colors.white70 : Colors.blue);
     final titleColor = isPrimary ? Colors.white70 : AppColor.secondaryText;
-    final valueColor = isPrimary ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color;
-    
+    final valueColor = isPrimary
+        ? Colors.white
+        : Theme.of(context).textTheme.bodyLarge?.color;
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -657,19 +758,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              color: iconColor,
-              size: 20,
-            ),
+            Icon(icon, color: iconColor, size: 20),
             const SizedBox(height: 15),
-            Text(
-              title,
-              style: TextStyle(
-                color: titleColor,
-                fontSize: 12,
-              ),
-            ),
+            Text(title, style: TextStyle(color: titleColor, fontSize: 12)),
             const SizedBox(height: 5),
             Text(
               value,
@@ -698,10 +789,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark ? Colors.grey.withOpacity(0.2) : Colors.blue.withOpacity(0.1),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.grey.withOpacity(0.2)
+                : Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.blue),
+          child: Icon(
+            icon,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white70
+                : Colors.blue,
+          ),
         ),
         title: Text(
           title,

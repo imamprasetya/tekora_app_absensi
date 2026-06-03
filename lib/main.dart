@@ -3,10 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tekora_app_absensi/utils/app_colors.dart';
 import 'package:tekora_app_absensi/utils/theme_notifier.dart';
 import 'package:tekora_app_absensi/views/splash_screen.dart';
+import 'package:tekora_app_absensi/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeNotifier.loadTheme();
+  await NotificationService.init();
   runApp(const MyApp());
 }
 

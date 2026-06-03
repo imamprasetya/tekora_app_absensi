@@ -9,6 +9,7 @@ import 'package:tekora_app_absensi/services/api/get_profile.dart';
 import 'package:tekora_app_absensi/utils/app_colors.dart';
 import 'package:tekora_app_absensi/views/checkin_screen.dart';
 import 'package:tekora_app_absensi/views/izin_screen.dart';
+import 'package:tekora_app_absensi/utils/profile_notifier.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Status absen: "none", "checkin", "checkout"
   String status = "none";
+  bool hasIzinToday = false;
 
   String checkInTime = "--:--";
   String checkOutTime = "--:--";
@@ -36,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Map<String, dynamic>> weeklyHistory = [];
   bool isLoadingHistory = false;
-  
+
   Map<String, dynamic>? statsData;
   bool isLoadingStats = false;
 
@@ -67,11 +69,46 @@ class _HomeScreenState extends State<HomeScreen> {
   void _resetTodayData() {
     setState(() {
       status = "none";
+      hasIzinToday = false;
       checkInTime = "--:--";
       checkOutTime = "--:--";
       checkInLocation = "-";
       checkOutLocation = "-";
     });
+  }
+
+  void _showIzinBlockedDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Action Blocked"),
+        content: const Text(
+          "You have already taken a leave today. You can only check in or take another leave tomorrow.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCheckInBlockedDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Absen Ditolak"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _initialLoad() async {
@@ -88,12 +125,15 @@ class _HomeScreenState extends State<HomeScreen> {
       if (historyScrollController.hasClients) {
         final maxScroll = historyScrollController.position.maxScrollExtent;
         final currentScroll = historyScrollController.offset;
-        final isScrolling = historyScrollController.position.isScrollingNotifier.value;
-        
-        // Auto-scroll jika maxScroll valid dan belum mentok 
+        final isScrolling =
+            historyScrollController.position.isScrollingNotifier.value;
+
+        // Auto-scroll jika maxScroll valid dan belum mentok
         if (!isScrolling && maxScroll > 0 && currentScroll < maxScroll) {
           historyScrollController.jumpTo(currentScroll + 1.0);
-        } else if (!isScrolling && currentScroll >= maxScroll && maxScroll > 0) {
+        } else if (!isScrolling &&
+            currentScroll >= maxScroll &&
+            maxScroll > 0) {
           // Putar balik ke awal
           historyScrollController.jumpTo(0.0);
         }
@@ -109,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// ================= AMBIL DATA PROFIL =================
+  // AMBIL DATA PROFIL
   Future<void> loadProfile() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -118,16 +158,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final profile = await getProfile(token);
       if (mounted) {
-        setState(() {
-          userName = profile['name'] ?? "User";
-        });
+        setState(() => userName = profile['name'] ?? "User");
+        ProfileNotifier.userNameNotifier.value = userName;
       }
     } catch (e) {
       if (mounted) setState(() => userName = "User");
     }
   }
 
-  /// ================= CEK STATUS ABSEN HARI INI =================
+  ///  CEK STATUS ABSEN HARI INI
   Future<void> loadTodayAbsen() async {
     if (!mounted) return;
     setState(() => isLoading = true);
@@ -176,6 +215,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 : "-");
 
         // 2. Tentukan Status
+        String apiStatus = apiData?['status']?.toString().toLowerCase() ?? "";
+        if (apiStatus.contains('izin') ||
+            apiStatus.contains('sakit') ||
+            apiStatus.contains('leave') ||
+            apiStatus.contains('sick')) {
+          hasIzinToday = true;
+        }
+
         if (checkOutTime != "--:--") {
           status = "checkout";
         } else if (checkInTime != "--:--") {
@@ -191,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// ================= AMBIL DATA HISTORY MINGGUAN =================
+  ///  AMBIL DATA HISTORY MINGGUAN
   Future<void> loadWeeklyHistory() async {
     if (!mounted) return;
     setState(() => isLoadingHistory = true);
@@ -213,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
           data['data'],
         );
 
-        // Sorting: Tanggal terbaru di atas/depan dengan validasi nullable
+        // Tanggal terbaru di atas/depan dengan validasi nullable
         rawList.sort((a, b) {
           String dateAStr =
               a['attendance_date']?.toString() ??
@@ -245,14 +292,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// ================= AMBIL DATA STATISTIK BULANAN =================
+  ///  AMBIL DATA STATISTIK BULANAN
   Future<void> loadStats() async {
     if (!mounted) return;
     setState(() => isLoadingStats = true);
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
-      
+
       final dt = DateTime.now();
       // Tarik start date dari tanggal 1 bulan ini
       final startDate = DateFormat('yyyy-MM-01').format(dt);
@@ -281,6 +328,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> handleNavigation() async {
+    if (hasIzinToday) {
+      _showIzinBlockedDialog();
+      return;
+    }
+
+    if (status == "none") {
+      final now = DateTime.now();
+      if (now.weekday == DateTime.saturday || now.weekday == DateTime.sunday) {
+        _showCheckInBlockedDialog(
+          "Absen ditolak. Hari ini adalah hari libur (akhir pekan).",
+        );
+        return;
+      }
+      if (now.hour >= 17) {
+        _showCheckInBlockedDialog(
+          "Absen masuk ditolak karena sudah melewati jam pulang kantor (17:00).",
+        );
+        return;
+      }
+    }
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -295,6 +363,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return "Selamat Pagi,";
+    } else if (hour >= 12 && hour < 15) {
+      return "Selamat Siang,";
+    } else if (hour >= 15 && hour < 18) {
+      return "Selamat Sore,";
+    } else {
+      return "Selamat Malam,";
+    }
+  }
+
   String formatTime(DateTime time) => DateFormat('HH:mm:ss').format(time);
   String formatDate(DateTime date) => DateFormat('EEEE, dd MMMM').format(date);
 
@@ -303,12 +384,16 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).scaffoldBackgroundColor : AppColor.primary,
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? Theme.of(context).scaffoldBackgroundColor
+            : AppColor.primary,
         title: Text(
           "TEKORA",
           style: TextStyle(
-            fontWeight: FontWeight.bold, 
-            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.white
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.white,
           ),
         ),
         centerTitle: true,
@@ -326,18 +411,23 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Good Morning,",
-                style: TextStyle(color: Colors.grey, fontSize: 16),
+              Text(
+                _getGreeting(),
+                style: const TextStyle(color: Colors.grey, fontSize: 16),
               ),
               const SizedBox(height: 4),
-              Text(
-                userName,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                ),
+              ValueListenableBuilder<String>(
+                valueListenable: ProfileNotifier.userNameNotifier,
+                builder: (context, name, child) {
+                  return Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 25),
 
@@ -346,7 +436,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).cardColor : AppColor.primary,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).cardColor
+                      : AppColor.primary,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     if (Theme.of(context).brightness != Brightness.dark)
@@ -415,8 +507,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         ? const CircularProgressIndicator(color: Colors.white)
                         : ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.blueGrey.shade800 : Colors.white,
-                              foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColor.primary,
+                              backgroundColor:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.blueGrey.shade800
+                                  : Colors.white,
+                              foregroundColor:
+                                  Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? Colors.white
+                                  : AppColor.primary,
                               minimumSize: const Size(double.infinity, 55),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
@@ -424,19 +524,23 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             onPressed: handleNavigation,
                             child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Text(
-                                  status == "none"
-                                      ? "Check In Now"
-                                      : status == "checkin"
-                                      ? "Check Out Now"
-                                      : "View Attendance",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppColor.primary,
-                                  ),
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                status == "none"
+                                    ? "Check In Now"
+                                    : status == "checkin"
+                                    ? "Check Out Now"
+                                    : "View Attendance",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color:
+                                      Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : AppColor.primary,
                                 ),
+                              ),
                             ),
                           ),
                     const SizedBox(height: 12),
@@ -450,14 +554,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const IzinScreen()),
-                        ),
+                        onPressed: () {
+                          if (hasIzinToday) {
+                            _showIzinBlockedDialog();
+                            return;
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const IzinScreen(),
+                            ),
+                          ).then((value) {
+                            if (value == true) {
+                              loadTodayAbsen();
+                              loadWeeklyHistory();
+                              loadStats();
+                            }
+                          });
+                        },
                         child: Text(
                           "Submit Leave Request",
                           style: TextStyle(
-                            color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.white,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.white,
                           ),
                         ),
                       ),
@@ -467,7 +588,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 30),
 
-              /// ================= WEEKLY HISTORY SECTION =================
+              ///  WEEKLY HISTORY SECTION
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
@@ -495,7 +616,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 170,
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (notif) {
-                      if (notif is ScrollStartNotification && notif.dragDetails != null) {
+                      if (notif is ScrollStartNotification &&
+                          notif.dragDetails != null) {
                         scrollTimer?.cancel();
                       } else if (notif is ScrollEndNotification) {
                         _startAutoScroll();
@@ -513,17 +635,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             dayData['tanggal']?.toString() ??
                             dayData['date']?.toString() ??
                             '';
-                        final date = DateTime.tryParse(dateStr) ?? DateTime.now();
+                        final date =
+                            DateTime.tryParse(dateStr) ?? DateTime.now();
 
-                        final checkInTime = dayData['check_in']?.toString() ??
+                        final checkInTime =
+                            dayData['check_in']?.toString() ??
                             dayData['check_in_time']?.toString() ??
                             dayData['jam_masuk']?.toString() ??
                             "--:--";
-                        final checkOutTime = dayData['check_out']?.toString() ??
+                        final checkOutTime =
+                            dayData['check_out']?.toString() ??
                             dayData['check_out_time']?.toString() ??
                             dayData['jam_keluar']?.toString() ??
                             "--:--";
-                        
+
                         final computedStatus = _getComputedStatus(
                           dayData['status']?.toString() ?? 'masuk',
                           checkInTime,
@@ -549,7 +674,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Flexible(
                                     child: Text(
@@ -557,16 +683,25 @@ class _HomeScreenState extends State<HomeScreen> {
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12,
-                                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : AppColor.primary,
+                                        color:
+                                            Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.white70
+                                            : AppColor.primary,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   const SizedBox(width: 4),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: _getStatusColor(computedStatus).withOpacity(0.1),
+                                      color: _getStatusColor(
+                                        computedStatus,
+                                      ).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -581,23 +716,55 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                               const Spacer(),
-                              _buildHistoryRow(
-                                "In",
-                                dayData['check_in']?.toString() ??
-                                    dayData['check_in_time']?.toString() ??
-                                    dayData['jam_masuk']?.toString() ??
-                                    "--:--",
-                                Colors.green,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildHistoryRow(
-                                "Out",
-                                dayData['check_out']?.toString() ??
-                                    dayData['check_out_time']?.toString() ??
-                                    dayData['jam_keluar']?.toString() ??
-                                    "--:--",
-                                Colors.red,
-                              ),
+                              if (computedStatus.toLowerCase().contains(
+                                    "izin",
+                                  ) ||
+                                  computedStatus.toLowerCase().contains(
+                                    "sakit",
+                                  ) ||
+                                  computedStatus.toLowerCase().contains(
+                                    "leave",
+                                  ) ||
+                                  computedStatus.toLowerCase().contains(
+                                    "sick",
+                                  )) ...[
+                                const Text(
+                                  "Alasan Izin:",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Expanded(
+                                  child: Text(
+                                    dayData['alasan_izin']?.toString() ??
+                                        "Tanpa alasan",
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: Theme.of(
+                                        context,
+                                      ).textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[
+                                _buildHistoryRow(
+                                  "In",
+                                  checkInTime,
+                                  Colors.green,
+                                ),
+                                const SizedBox(height: 8),
+                                _buildHistoryRow(
+                                  "Out",
+                                  checkOutTime,
+                                  Colors.red,
+                                ),
+                              ],
                             ],
                           ),
                         );
@@ -607,7 +774,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               const SizedBox(height: 30),
 
-              /// ================= STATISTIK =================
+              ///  STATISTIK
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
@@ -623,7 +790,12 @@ class _HomeScreenState extends State<HomeScreen> {
               if (isLoadingStats)
                 const Center(child: CircularProgressIndicator())
               else if (statsData == null)
-                const Center(child: Text("Failed to load statistics", style: TextStyle(color: Colors.grey)))
+                const Center(
+                  child: Text(
+                    "Failed to load statistics",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
               else
                 Row(
                   children: [
@@ -664,6 +836,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAbsenInfo(String label, String time, String location) {
+    String cleanLocation = location;
+    String modeTag = "";
+    if (location.startsWith("[WFO]")) {
+      cleanLocation = location.substring(5);
+      modeTag = "WFO";
+    } else if (location.startsWith("[WFH]")) {
+      cleanLocation = location.substring(5);
+      modeTag = "WFH";
+    } else if (location.startsWith("[Dinas Luar]")) {
+      cleanLocation = location.substring(12);
+      modeTag = "Dinas Luar";
+    }
+
     return Expanded(
       child: Column(
         children: [
@@ -684,9 +869,27 @@ class _HomeScreenState extends State<HomeScreen> {
               fontSize: 18,
             ),
           ),
+          if (modeTag.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                modeTag,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
-            location,
+            cleanLocation,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -700,7 +903,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatItem(IconData icon, String title, String value, Color color) {
+  Widget _buildStatItem(
+    IconData icon,
+    String title,
+    String value,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
@@ -727,10 +935,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
-          ),
+          Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
         ],
       ),
     );
@@ -755,17 +960,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Color _getStatusColor(String status) {
     status = status.toLowerCase();
-    if (status.contains('izin') || status.contains('sakit') || status.contains('cepat')) return Colors.orange;
-    if (status.contains('telat') || status.contains('terlambat')) return Colors.red;
+    if (status.contains('izin') ||
+        status.contains('sakit') ||
+        status.contains('cepat'))
+      return Colors.orange;
+    if (status.contains('telat') || status.contains('terlambat'))
+      return Colors.red;
     return Colors.green;
   }
 
-  String _getComputedStatus(String originalStatus, String? checkIn, String? checkOut) {
+  String _getComputedStatus(
+    String originalStatus,
+    String? checkIn,
+    String? checkOut,
+  ) {
     String status = originalStatus.toLowerCase();
-    if (status.contains('izin') || status.contains('sakit') || status.contains('telat')) {
+    if (status.contains('izin') ||
+        status.contains('sakit') ||
+        status.contains('telat')) {
       return originalStatus;
     }
-    
+
     bool isLate = false;
     bool isEarlyLeave = false;
 

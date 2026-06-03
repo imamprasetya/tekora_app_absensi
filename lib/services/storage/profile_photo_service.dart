@@ -3,15 +3,18 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:tekora_app_absensi/services/api/get_profile_foto.dart';
+
 class ProfilePhotoService {
   static const String _photoPathKey = 'profile_photo_path';
   static final ImagePicker _picker = ImagePicker();
 
   /// Menampilkan bottom sheet untuk memilih sumber foto (kamera/galeri)
-  /// dan menyimpan foto ke local storage.
-  /// Mengembalikan path foto yang berhasil disimpan, atau null jika proses dibatalkan.
+  /// dan mengupload foto ke API, lalu menyimpan URL ke local storage.
+  /// Mengembalikan URL foto yang berhasil disimpan, atau null jika proses dibatalkan.
   static Future<String?> pickAndSavePhoto({
     required ImageSource source,
+    required String token,
   }) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
@@ -23,45 +26,49 @@ class ProfilePhotoService {
 
       if (pickedFile == null) return null;
 
-      // Simpan foto ke direktori aplikasi agar persisten
-      final appDir = await getApplicationDocumentsDirectory();
-      final fileName = 'profile_photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final savedFile = await File(pickedFile.path).copy('${appDir.path}/$fileName');
+      final file = File(pickedFile.path);
 
-      // Hapus foto lama jika ada
+      // Upload ke API
+      final imageUrl = await updateProfilePhoto(token, file);
+
+      // Hapus foto lama jika ada dan jika berupa file lokal
       final oldPath = await getPhotoPath();
-      if (oldPath != null) {
+      if (oldPath != null && !oldPath.startsWith('http')) {
         final oldFile = File(oldPath);
         if (await oldFile.exists()) {
           await oldFile.delete();
         }
       }
 
-      // Simpan path foto baru ke SharedPreferences
+      // Simpan URL foto baru ke SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_photoPathKey, savedFile.path);
+      await prefs.setString(_photoPathKey, imageUrl);
 
-      return savedFile.path;
+      return imageUrl;
     } catch (e) {
-      print("Error picking photo: $e");
-      throw Exception("Gagal membuka galeri/kamera: $e");
+      print("Error picking/uploading photo: $e");
+      throw Exception(e.toString().replaceAll("Exception: ", ""));
     }
   }
 
-  /// Mengambil path foto profil yang tersimpan
+  /// Mengambil path/URL foto profil yang tersimpan
   static Future<String?> getPhotoPath() async {
     final prefs = await SharedPreferences.getInstance();
     final path = prefs.getString(_photoPathKey);
-    if (path != null && await File(path).exists()) {
-      return path;
+    if (path != null) {
+      if (path.startsWith('http')) {
+        return path;
+      } else if (await File(path).exists()) {
+        return path;
+      }
     }
     return null;
   }
 
-  /// Menghapus foto profil
+  /// Menghapus foto profil dari storage lokal
   static Future<void> deletePhoto() async {
     final path = await getPhotoPath();
-    if (path != null) {
+    if (path != null && !path.startsWith('http')) {
       final file = File(path);
       if (await file.exists()) {
         await file.delete();

@@ -24,7 +24,7 @@ Future<void> register({
         "email": email,
         "password": password,
         "jenis_kelamin": jenisKelamin,
-        "profile_photo": "", // sementara kosong
+        "profile_photo": "",
         "batch_id": batchId,
         "training_id": trainingId,
       }),

@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Image.asset(
-                    'assets/image/logo_tekora.png',
+                    'assets/images/logo_tekora.png',
                     width: 80,
                     height: 80,
                   ),

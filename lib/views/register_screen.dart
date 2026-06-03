@@ -165,7 +165,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           shape: BoxShape.circle,
                         ),
                         child: Image.asset(
-                          'assets/image/logo_tekora.png',
+                          'assets/images/logo_tekora.png',
                           width: 60,
                           height: 60,
                         ),
