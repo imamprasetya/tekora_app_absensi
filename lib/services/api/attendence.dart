@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 class AttendanceService {
   Future<List<AttendanceModel>> fetchHistory(String token) async {
-    // MOCK DEMO MODE
+    // pura-puranya ambil data history absensi dari server
     await Future.delayed(const Duration(milliseconds: 500));
     
     // Generate some mock history for the last 5 days
@@ -30,7 +30,7 @@ class AttendanceService {
     required double lng,
     required String address,
   }) async {
-    // MOCK DEMO MODE
+    // pura-puranya nembak API checkin sukses
     await Future.delayed(const Duration(seconds: 1));
   }
 
@@ -42,7 +42,7 @@ class AttendanceService {
     required double lng,
     required String address,
   }) async {
-    // MOCK DEMO MODE
+    // pura-puranya nembak API checkout sukses
     await Future.delayed(const Duration(seconds: 1));
   }
 }

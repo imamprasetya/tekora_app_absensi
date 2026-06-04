@@ -171,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() => isLoading = true);
     try {
-      // MOCK DEMO MODE
+      // pura-puranya fetch data hari ini (simulasi delay API)
       await Future.delayed(const Duration(milliseconds: 500));
       
       setState(() {
@@ -194,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() => isLoadingHistory = true);
     try {
-      // MOCK DEMO MODE
+      // pura-puranya fetch data history 5 hari terakhir
       await Future.delayed(const Duration(milliseconds: 500));
       
       final today = DateTime.now();
@@ -226,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() => isLoadingStats = true);
     try {
-      // MOCK DEMO MODE
+      // pura-puranya fetch stats bulanan
       await Future.delayed(const Duration(milliseconds: 500));
       
       setState(() {

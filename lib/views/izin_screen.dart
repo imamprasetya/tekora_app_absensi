@@ -75,7 +75,7 @@ class _IzinScreenState extends State<IzinScreen> {
     setState(() => isLoading = true);
 
     try {
-      // MOCK DEMO MODE
+      // pura-puranya submit data ke API (biar kerasa loading dikit)
       await Future.delayed(const Duration(seconds: 1));
 
       if (mounted) {

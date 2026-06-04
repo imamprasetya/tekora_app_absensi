@@ -1,5 +1,5 @@
 Future<List<dynamic>> getBatch() async {
-  // MOCK DEMO MODE
+  // pura-puranya ambil data batch dari API (pakai list statis)
   await Future.delayed(const Duration(milliseconds: 500));
   return [
     {"id": 1, "name": "Batch 1 (Morning)"},

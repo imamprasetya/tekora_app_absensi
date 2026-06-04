@@ -3,7 +3,7 @@ import '../storage/preference.dart';
 
 Future<void> login({required String email, required String password}) async {
   try {
-    // MOCK DEMO MODE: Simulate network delay and always succeed
+    // bypass login aja biar gampang dicoba di web portofolio
     await Future.delayed(const Duration(seconds: 1));
 
     log("LOGIN: MOCK DEMO SUCCESS");

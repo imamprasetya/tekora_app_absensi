@@ -6,7 +6,7 @@ Future<UserModel?> getUser() async {
   try {
     final token = await PreferenceHandler.getToken();
 
-    // MOCK DEMO MODE
+    // pura-puranya nembak API get_user (kasih delay dikit biar kerasa)
     await Future.delayed(const Duration(milliseconds: 500));
     log("GET USER: MOCK DEMO SUCCESS");
 

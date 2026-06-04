@@ -4,7 +4,7 @@ Future<Map<String, dynamic>> updateProfile(
   String email,
 ) async {
   try {
-    // MOCK DEMO MODE: Simulate network delay and always succeed
+    // bypass edit profile buat versi web demo (pasti sukses)
     await Future.delayed(const Duration(seconds: 1));
 
     print('Update Profile: MOCK DEMO SUCCESS');

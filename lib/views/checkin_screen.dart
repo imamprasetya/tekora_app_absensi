@@ -103,7 +103,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
           : "-";
     });
 
-    // MOCK DEMO MODE
+    // pura-puranya nge-hit API buat ambil data hari ini
     try {
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;

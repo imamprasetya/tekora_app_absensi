@@ -1,5 +1,5 @@
 Future<Map<String, dynamic>> getProfile(String token) async {
-  // MOCK DEMO MODE: Simulate network delay and return mock data
+  // pura-puranya nembak API get profile, mock aja data delay
   await Future.delayed(const Duration(milliseconds: 500));
 
   return {

@@ -10,7 +10,7 @@ Future<void> register({
   required int trainingId,
 }) async {
   try {
-    // MOCK DEMO MODE: Simulate network delay and always succeed
+    // bypass register buat versi web demo (selalu berhasil)
     await Future.delayed(const Duration(seconds: 1));
 
     log("REGISTER: MOCK DEMO SUCCESS");
