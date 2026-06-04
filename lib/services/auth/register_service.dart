@@ -1,7 +1,4 @@
-import 'dart:convert';
 import 'dart:developer';
-import 'package:http/http.dart' as http;
-import '../api/endpoint.dart';
 import '../storage/preference.dart';
 
 Future<void> register({
@@ -13,32 +10,12 @@ Future<void> register({
   required int trainingId,
 }) async {
   try {
-    final response = await http.post(
-      Uri.parse(Endpoint.register),
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({
-        "name": name,
-        "email": email,
-        "password": password,
-        "jenis_kelamin": jenisKelamin,
-        "profile_photo": "",
-        "batch_id": batchId,
-        "training_id": trainingId,
-      }),
-    );
+    // MOCK DEMO MODE: Simulate network delay and always succeed
+    await Future.delayed(const Duration(seconds: 1));
 
-    log("REGISTER RESPONSE: ${response.body}");
+    log("REGISTER: MOCK DEMO SUCCESS");
 
-    final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      await PreferenceHandler.saveToken(data["data"]["token"]);
-    } else {
-      throw Exception(data["message"] ?? "Registration failed");
-    }
+    await PreferenceHandler.saveToken("mock_demo_token_12345");
   } catch (e) {
     log("ERROR REGISTER: $e");
     rethrow;

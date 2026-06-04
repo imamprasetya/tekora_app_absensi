@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,9 +10,6 @@ class ProfilePhotoService {
   static const String _photoPathKey = 'profile_photo_path';
   static final ImagePicker _picker = ImagePicker();
 
-  /// Menampilkan bottom sheet untuk memilih sumber foto (kamera/galeri)
-  /// dan mengupload foto ke API, lalu menyimpan URL ke local storage.
-  /// Mengembalikan URL foto yang berhasil disimpan, atau null jika proses dibatalkan.
   static Future<String?> pickAndSavePhoto({
     required ImageSource source,
     required String token,
@@ -26,14 +24,12 @@ class ProfilePhotoService {
 
       if (pickedFile == null) return null;
 
-      final file = File(pickedFile.path);
-
       // Upload ke API
-      final imageUrl = await updateProfilePhoto(token, file);
+      final imageUrl = await updateProfilePhoto(token, pickedFile);
 
       // Hapus foto lama jika ada dan jika berupa file lokal
       final oldPath = await getPhotoPath();
-      if (oldPath != null && !oldPath.startsWith('http')) {
+      if (!kIsWeb && oldPath != null && !oldPath.startsWith('http') && !oldPath.startsWith('blob:')) {
         final oldFile = File(oldPath);
         if (await oldFile.exists()) {
           await oldFile.delete();
@@ -51,24 +47,22 @@ class ProfilePhotoService {
     }
   }
 
-  /// Mengambil path/URL foto profil yang tersimpan
   static Future<String?> getPhotoPath() async {
     final prefs = await SharedPreferences.getInstance();
     final path = prefs.getString(_photoPathKey);
     if (path != null) {
-      if (path.startsWith('http')) {
+      if (path.startsWith('http') || path.startsWith('blob:') || kIsWeb) {
         return path;
-      } else if (await File(path).exists()) {
+      } else if (!kIsWeb && await File(path).exists()) {
         return path;
       }
     }
     return null;
   }
 
-  /// Menghapus foto profil dari storage lokal
   static Future<void> deletePhoto() async {
     final path = await getPhotoPath();
-    if (path != null && !path.startsWith('http')) {
+    if (!kIsWeb && path != null && !path.startsWith('http') && !path.startsWith('blob:')) {
       final file = File(path);
       if (await file.exists()) {
         await file.delete();

@@ -103,60 +103,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
           : "-";
     });
 
-    final token = prefs.getString('token');
-    if (token == null) return;
-
+    // MOCK DEMO MODE
     try {
-      final res = await http.get(
-        Uri.parse(Endpoint.absenToday),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-
-      final data = jsonDecode(res.body);
-      if (data['data'] == null) return;
-
-      dynamic raw = data['data'];
-      if (raw is! Map) return;
-
-      String? apiDate = raw['attendance_date'] ?? raw['date'] ?? raw['tanggal'];
-      bool isDataForToday = false;
-      if (apiDate != null) {
-        String normalizedApiDate = apiDate.toString().substring(0, 10);
-        isDataForToday = normalizedApiDate == todayKey;
-      }
-
-      if (!isDataForToday) return;
-
-      bool isValidTime(dynamic value) {
-        return value != null &&
-            value.toString().trim().isNotEmpty &&
-            value.toString() != "--:--";
-      }
-
-      String apiCheckIn =
-          raw['check_in'] ?? raw['checkin'] ?? raw['check_in_time'] ?? "--:--";
-      String apiCheckOut =
-          raw['check_out'] ??
-          raw['checkout'] ??
-          raw['check_out_time'] ??
-          "--:--";
-      String apiCheckInLoc =
-          raw['check_in_address'] ?? raw['check_in_location'] ?? "-";
-      String apiCheckOutLoc =
-          raw['check_out_address'] ?? raw['check_out_location'] ?? "-";
-
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      
       setState(() {
-        if (isValidTime(apiCheckIn)) {
-          checkInTimeDisplay = apiCheckIn.toString();
-          checkInLocationDisplay = apiCheckInLoc.toString();
-        }
-        if (isValidTime(apiCheckOut)) {
-          checkOutTimeDisplay = apiCheckOut.toString();
-          checkOutLocationDisplay = apiCheckOutLoc.toString();
-        }
+        checkInTimeDisplay = "08:00";
+        checkInLocationDisplay = "Office (Mock)";
       });
     } catch (_) {}
   }

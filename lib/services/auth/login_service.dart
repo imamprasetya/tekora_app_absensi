@@ -1,30 +1,15 @@
-import 'dart:convert';
 import 'dart:developer';
-import 'package:http/http.dart' as http;
-import '../api/endpoint.dart';
 import '../storage/preference.dart';
 
 Future<void> login({required String email, required String password}) async {
   try {
-    final response = await http.post(
-      Uri.parse(Endpoint.login),
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode({"email": email, "password": password}),
-    );
+    // MOCK DEMO MODE: Simulate network delay and always succeed
+    await Future.delayed(const Duration(seconds: 1));
 
-    log("LOGIN: ${response.body}");
+    log("LOGIN: MOCK DEMO SUCCESS");
 
-    final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      await PreferenceHandler.saveToken(data["data"]["token"]);
-      await PreferenceHandler.saveUserEmail(email); // Simpan email user
-    } else {
-      throw Exception(data["message"]);
-    }
+    await PreferenceHandler.saveToken("mock_demo_token_12345");
+    await PreferenceHandler.saveUserEmail(email); // Simpan email user
   } catch (e) {
     log("ERROR LOGIN: $e");
     rethrow;

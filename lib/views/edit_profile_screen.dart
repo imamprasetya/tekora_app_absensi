@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tekora_app_absensi/services/storage/preference.dart';
@@ -369,10 +370,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 radius: 50,
                                 backgroundColor: Colors.grey.shade200,
                                 backgroundImage: _profilePhotoPath != null
-                                    ? (_profilePhotoPath!.startsWith('http')
-                                        ? NetworkImage(_profilePhotoPath!)
-                                        : FileImage(File(_profilePhotoPath!)))
-                                            as ImageProvider
+                                    ? (_profilePhotoPath!.startsWith('assets/')
+                                        ? AssetImage(_profilePhotoPath!)
+                                        : (_profilePhotoPath!.startsWith('http') || _profilePhotoPath!.startsWith('blob:') || kIsWeb
+                                            ? NetworkImage(_profilePhotoPath!)
+                                            : FileImage(File(_profilePhotoPath!))))
+                                                as ImageProvider
                                     : null,
                                 child: _profilePhotoPath == null
                                     ? const Icon(Icons.person, size: 50, color: Colors.grey)

@@ -1,17 +1,10 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'endpoint.dart';
-
 Future<Map<String, dynamic>> getProfile(String token) async {
-  final response = await http.get(
-    Uri.parse(Endpoint.profile),
-    headers: {"Accept": "application/json", "Authorization": "Bearer $token"},
-  );
+  // MOCK DEMO MODE: Simulate network delay and return mock data
+  await Future.delayed(const Duration(milliseconds: 500));
 
-  if (response.statusCode == 200) {
-    final data = json.decode(response.body);
-    return data['data'];
-  } else {
-    throw Exception("Failed to load profile");
-  }
+  return {
+    "name": "Demo User",
+    "email": "demo@example.com",
+    "profile_photo": "" 
+  };
 }

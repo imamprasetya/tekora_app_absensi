@@ -1,17 +1,8 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'endpoint.dart';
-
 Future<List<dynamic>> getTraining() async {
-  final response = await http.get(
-    Uri.parse(Endpoint.trainings),
-    headers: {"Accept": "application/json"},
-  );
-
-  if (response.statusCode == 200) {
-    final data = json.decode(response.body);
-    return data['data'];
-  } else {
-    throw Exception("Failed to load trainings");
-  }
+  // MOCK DEMO MODE
+  await Future.delayed(const Duration(milliseconds: 500));
+  return [
+    {"id": 1, "name": "Flutter Development"},
+    {"id": 2, "name": "UI/UX Design"},
+  ];
 }

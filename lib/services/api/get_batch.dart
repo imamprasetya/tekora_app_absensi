@@ -1,17 +1,8 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'endpoint.dart';
-
 Future<List<dynamic>> getBatch() async {
-  final response = await http.get(
-    Uri.parse(Endpoint.batches),
-    headers: {"Accept": "application/json"},
-  );
-
-  if (response.statusCode == 200) {
-    final data = json.decode(response.body);
-    return data['data'];
-  } else {
-    throw Exception("Failed to load batches");
-  }
+  // MOCK DEMO MODE
+  await Future.delayed(const Duration(milliseconds: 500));
+  return [
+    {"id": 1, "name": "Batch 1 (Morning)"},
+    {"id": 2, "name": "Batch 2 (Afternoon)"},
+  ];
 }

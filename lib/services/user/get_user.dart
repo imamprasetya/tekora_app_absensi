@@ -1,31 +1,22 @@
-import 'dart:convert';
 import 'dart:developer';
-import 'package:http/http.dart' as http;
 import '../../models/user_model.dart';
-import '../api/endpoint.dart';
 import '../storage/preference.dart';
 
 Future<UserModel?> getUser() async {
   try {
     final token = await PreferenceHandler.getToken();
 
-    final response = await http.get(
-      Uri.parse(Endpoint.profile),
-      headers: {
-        "Accept": "application/json",
-        "Authorization": "Bearer ${token ?? ''}",
-      },
-    );
+    // MOCK DEMO MODE
+    await Future.delayed(const Duration(milliseconds: 500));
+    log("GET USER: MOCK DEMO SUCCESS");
 
-    log("GET USER: ${response.body}");
-
-    final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      return UserModel.fromJson(data["data"]);
-    } else {
-      throw Exception(data["message"]);
-    }
+    return UserModel.fromJson({
+      "id": 1,
+      "name": "Demo User",
+      "email": "demo@example.com",
+      "profile_photo": "",
+      "jenis_kelamin": "Laki-laki"
+    });
   } catch (e) {
     log("ERROR GET USER: $e");
     rethrow;

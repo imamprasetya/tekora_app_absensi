@@ -171,65 +171,16 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() => isLoading = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-      final userKey = prefs.getString('active_user_email') ?? "default";
-      final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-      final res = await http.get(
-        Uri.parse(Endpoint.absenToday),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
-      );
-
-      final data = jsonDecode(res.body);
-      bool hasApiData = data['data'] != null && data['data'] is Map;
-      var apiData = hasApiData ? data['data'] : null;
-
+      // MOCK DEMO MODE
+      await Future.delayed(const Duration(milliseconds: 500));
+      
       setState(() {
-        // 1. Ambil Jam & Lokasi (Prioritas API, lalu Local Storage)
-        checkInTime =
-            apiData?['check_in'] ??
-            (prefs.getString('saved_checkin_date_$userKey') == todayKey
-                ? prefs.getString('saved_checkin_$userKey')
-                : "--:--");
-
-        checkOutTime =
-            apiData?['check_out'] ??
-            (prefs.getString('saved_checkout_date_$userKey') == todayKey
-                ? prefs.getString('saved_checkout_$userKey')
-                : "--:--");
-
-        checkInLocation =
-            apiData?['check_in_address'] ??
-            (prefs.getString('saved_checkin_date_$userKey') == todayKey
-                ? prefs.getString('saved_checkin_location_$userKey')
-                : "-");
-
-        checkOutLocation =
-            apiData?['check_out_address'] ??
-            (prefs.getString('saved_checkout_date_$userKey') == todayKey
-                ? prefs.getString('saved_checkout_location_$userKey')
-                : "-");
-
-        // 2. Tentukan Status
-        String apiStatus = apiData?['status']?.toString().toLowerCase() ?? "";
-        if (apiStatus.contains('izin') ||
-            apiStatus.contains('sakit') ||
-            apiStatus.contains('leave') ||
-            apiStatus.contains('sick')) {
-          hasIzinToday = true;
-        }
-
-        if (checkOutTime != "--:--") {
-          status = "checkout";
-        } else if (checkInTime != "--:--") {
-          status = "checkin";
-        } else {
-          status = "none";
-        }
+        checkInTime = "08:00";
+        checkOutTime = "--:--";
+        checkInLocation = "Office";
+        checkOutLocation = "-";
+        hasIzinToday = false;
+        status = "checkin"; // simulate already checked in
       });
     } catch (e) {
       debugPrint("Error loadTodayAbsen: $e");
@@ -243,48 +194,26 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() => isLoadingHistory = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      final res = await http.get(
-        Uri.parse(Endpoint.history),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
-      );
-
-      final data = jsonDecode(res.body);
-      if (data['data'] != null && data['data'] is List) {
-        List<Map<String, dynamic>> rawList = List<Map<String, dynamic>>.from(
-          data['data'],
-        );
-
-        // Tanggal terbaru di atas/depan dengan validasi nullable
-        rawList.sort((a, b) {
-          String dateAStr =
-              a['attendance_date']?.toString() ??
-              a['tanggal']?.toString() ??
-              a['date']?.toString() ??
-              '';
-          String dateBStr =
-              b['attendance_date']?.toString() ??
-              b['tanggal']?.toString() ??
-              b['date']?.toString() ??
-              '';
-          DateTime? dateA = DateTime.tryParse(dateAStr);
-          DateTime? dateB = DateTime.tryParse(dateBStr);
-
-          if (dateA == null && dateB == null) return 0;
-          if (dateA == null) return 1;
-          if (dateB == null) return -1;
-          return dateB.compareTo(dateA);
-        });
-
-        setState(() {
-          weeklyHistory = rawList;
+      // MOCK DEMO MODE
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      final today = DateTime.now();
+      List<Map<String, dynamic>> rawList = [];
+      for (int i = 0; i < 5; i++) {
+        final date = today.subtract(Duration(days: i));
+        rawList.add({
+          "attendance_date": DateFormat('yyyy-MM-dd').format(date),
+          "check_in": "08:00",
+          "check_out": i == 0 ? "--:--" : "17:00", // simulate today not checked out yet
+          "status": "masuk",
+          "check_in_address": "Office",
+          "check_out_address": i == 0 ? "-" : "Office",
         });
       }
+
+      setState(() {
+        weeklyHistory = rawList;
+      });
     } catch (e) {
       debugPrint("Error loadWeeklyHistory: $e");
     } finally {
@@ -297,29 +226,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     setState(() => isLoadingStats = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      final dt = DateTime.now();
-      // Tarik start date dari tanggal 1 bulan ini
-      final startDate = DateFormat('yyyy-MM-01').format(dt);
-      final monthEnd = DateTime(dt.year, dt.month + 1, 0);
-      final endDate = DateFormat('yyyy-MM-dd').format(monthEnd);
-
-      final url = "${Endpoint.absenStats}?start=$startDate&end=$endDate";
-
-      final res = await http.get(
-        Uri.parse(url),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
-      );
-
-      final data = jsonDecode(res.body);
-      if (data != null && data['data'] != null) {
-        setState(() => statsData = data['data']);
-      }
+      // MOCK DEMO MODE
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      setState(() {
+        statsData = {
+          "total_hadir": 20,
+          "total_izin": 1,
+          "total_sakit": 0,
+          "total_absen": 0, // maybe alpha
+        };
+      });
     } catch (e) {
       debugPrint("Error loadStats: $e");
     } finally {

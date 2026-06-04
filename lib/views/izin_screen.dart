@@ -75,26 +75,12 @@ class _IzinScreenState extends State<IzinScreen> {
     setState(() => isLoading = true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      final res = await http.post(
-        Uri.parse("${Endpoint.baseUrl}/izin"),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "date": DateFormat('yyyy-MM-dd').format(selectedDate),
-          "alasan_izin": alasanController.text,
-        }),
-      );
-
-      final data = jsonDecode(res.body);
+      // MOCK DEMO MODE
+      await Future.delayed(const Duration(seconds: 1));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'] ?? "Leave request submitted successfully")),
+          const SnackBar(content: Text("Leave request submitted successfully (Mock)")),
         );
         Navigator.pop(context, true);
       }
