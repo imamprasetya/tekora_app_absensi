@@ -5,19 +5,21 @@ class AttendanceService {
   Future<List<AttendanceModel>> fetchHistory(String token) async {
     // pura-puranya ambil data history absensi dari server
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     // Generate some mock history for the last 5 days
     List<AttendanceModel> history = [];
     final today = DateTime.now();
     for (int i = 0; i < 5; i++) {
       final date = today.subtract(Duration(days: i));
-      history.add(AttendanceModel(
-        id: i + 1,
-        attendanceDate: date,
-        checkInTime: '08:00',
-        checkOutTime: '17:00',
-        status: 'Masuk',
-      ));
+      history.add(
+        AttendanceModel(
+          id: i + 1,
+          attendanceDate: date,
+          checkInTime: '08:00',
+          checkOutTime: '17:00',
+          status: 'Masuk',
+        ),
+      );
     }
     return history;
   }
